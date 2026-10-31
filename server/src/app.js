@@ -6,6 +6,7 @@ import { env } from './config/env.js';
 import { configurePassport } from './config/passport.js';
 import authRoutes from './routes/auth.routes.js';
 import meRoutes from './routes/me.routes.js';
+import listingRoutes from './routes/listings.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export const createApp = () => {
@@ -29,6 +30,7 @@ export const createApp = () => {
   // Mount API routes
   app.use('/api/auth', authRoutes);
   app.use('/api/me', meRoutes);
+  app.use('/api/listings', listingRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

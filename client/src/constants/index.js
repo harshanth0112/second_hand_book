@@ -14,3 +14,8 @@ export const DEPARTMENTS = [
   'Other',
 ];
 
+export const LISTING_TYPE = ['sell', 'free', 'swap'];
+export const CONDITION = ['like new', 'good', 'fair'];
+export const LISTING_STATUS = ['available', 'reserved', 'sold', 'removed', 'expired'];
+
+

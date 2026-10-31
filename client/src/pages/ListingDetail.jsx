@@ -1,0 +1,243 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { getListing } from '../api/listings';
+import { Eye, Calendar, BookOpen, AlertCircle, ArrowLeft, Tag, Layers, GraduationCap } from 'lucide-react';
+
+export function ListingDetail() {
+  const { id } = useParams();
+  const { user } = useAuth();
+
+  const [listing, setListing] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadData() {
+      try {
+        const data = await getListing(id);
+        if (isMounted) setListing(data);
+      } catch (err) {
+        if (isMounted) setError(err.message || 'Listing not found');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  if (loading) {
+    return <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-500">Loading textbook...</div>;
+  }
+
+  if (error || !listing) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Listing Unavailable</h2>
+        <p className="text-sm text-gray-600 mb-6">{error || 'This listing does not exist or has been removed.'}</p>
+        <Link to="/" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+          ← Return to Browse
+        </Link>
+      </div>
+    );
+  }
+
+  const isOwner = user && listing.seller?._id === user._id;
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <Link to="/" className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900 mb-6 transition">
+        <ArrowLeft className="w-4 h-4" />
+        Back to Browse
+      </Link>
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8 p-6 sm:p-8">
+        {/* Left column: Images */}
+        <div className="space-y-4">
+          <div className="aspect-[4/5] bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex items-center justify-center">
+            {listing.images && listing.images.length > 0 ? (
+              <img
+                src={listing.images[activeImageIdx] || listing.images[0]}
+                alt={listing.title}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="text-center p-6 text-gray-400">
+                <BookOpen className="w-16 h-16 mx-auto mb-2 opacity-50" />
+                <span className="text-sm">No photos provided</span>
+              </div>
+            )}
+          </div>
+
+          {listing.images && listing.images.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {listing.images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveImageIdx(i)}
+                  className={`w-16 h-16 rounded-lg overflow-hidden border-2 shrink-0 transition ${
+                    activeImageIdx === i ? 'border-blue-600 ring-2 ring-blue-500/20' : 'border-gray-200 opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <img src={img} alt={`Thumbnail ${i + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right column: Book Details */}
+        <div className="flex flex-col justify-between">
+          <div>
+            {/* Type & Status Badges */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`px-2.5 py-1 text-xs font-semibold rounded-md uppercase tracking-wider ${
+                listing.listingType === 'free'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : listing.listingType === 'swap'
+                  ? 'bg-purple-100 text-purple-800'
+                  : 'bg-blue-100 text-blue-800'
+              }`}>
+                {listing.listingType}
+              </span>
+
+              <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700 capitalize">
+                Condition: {listing.condition}
+              </span>
+            </div>
+
+            <h1 className="text-2xl font-bold text-gray-900 mb-1 leading-snug">{listing.title}</h1>
+            <p className="text-base text-gray-600 mb-4">by <span className="font-medium text-gray-800">{listing.author}</span></p>
+
+            {/* Price or Swap Details */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+              {listing.listingType === 'sell' && (
+                <div>
+                  <span className="text-xs text-gray-500 uppercase font-semibold">Price</span>
+                  <div className="text-3xl font-extrabold text-gray-900 mt-0.5">₹{listing.price}</div>
+                </div>
+              )}
+              {listing.listingType === 'free' && (
+                <div>
+                  <span className="text-xs text-emerald-700 uppercase font-semibold">Free Giveaway</span>
+                  <p className="text-sm text-gray-700 mt-1">This book is offered for free by the student.</p>
+                </div>
+              )}
+              {listing.listingType === 'swap' && (
+                <div>
+                  <span className="text-xs text-purple-700 uppercase font-semibold">Looking to Swap For</span>
+                  <div className="text-lg font-bold text-purple-950 mt-0.5">{listing.swapFor}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Academic Tags */}
+            <div className="grid grid-cols-2 gap-3 text-xs mb-6">
+              {listing.department && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <GraduationCap className="w-4 h-4 text-gray-400" />
+                  <span>Dept: <strong className="text-gray-900 font-medium">{listing.department}</strong></span>
+                </div>
+              )}
+              {listing.semester && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Layers className="w-4 h-4 text-gray-400" />
+                  <span>Semester: <strong className="text-gray-900 font-medium">{listing.semester}</strong></span>
+                </div>
+              )}
+              {listing.subject && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <BookOpen className="w-4 h-4 text-gray-400" />
+                  <span>Subject: <strong className="text-gray-900 font-medium">{listing.subject}</strong></span>
+                </div>
+              )}
+              {listing.courseCode && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Tag className="w-4 h-4 text-gray-400" />
+                  <span>Course: <strong className="text-gray-900 font-medium">{listing.courseCode}</strong></span>
+                </div>
+              )}
+            </div>
+
+            {listing.note && (
+              <div className="mb-6">
+                <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Seller Notes</h3>
+                <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100 whitespace-pre-line">
+                  {listing.note}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Seller Profile & Interaction Footers */}
+          <div className="border-t border-gray-200 pt-6 mt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm border border-blue-200">
+                  {listing.seller?.name ? listing.seller.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">{listing.seller?.name || 'Fellow Student'}</h4>
+                  <p className="text-xs text-gray-500">
+                    {listing.seller?.department ? `${listing.seller.department}` : 'Student'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <span className="flex items-center gap-1">
+                  <Eye className="w-3.5 h-3.5" />
+                  {listing.views}
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {new Date(listing.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Action buttons (Placeholders for Steps 5 & 6) */}
+            <div className="mt-6 flex gap-3">
+              {isOwner ? (
+                <Link
+                  to={`/listings/${listing._id}/edit`}
+                  className="w-full text-center py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg transition"
+                >
+                  Edit This Listing
+                </Link>
+              ) : (
+                <>
+                  {/* TODO(step 5): Connect Request Book modal */}
+                  <button
+                    disabled
+                    title="Book requests will be enabled in Step 5"
+                    className="flex-1 py-2.5 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg opacity-60 cursor-not-allowed"
+                  >
+                    Request Book (Step 5)
+                  </button>
+
+                  {/* TODO(step 6): Connect Chat button */}
+                  <button
+                    disabled
+                    title="Live chat will be enabled in Step 6"
+                    className="px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg opacity-60 cursor-not-allowed"
+                  >
+                    Chat (Step 6)
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

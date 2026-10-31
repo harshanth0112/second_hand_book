@@ -11,6 +11,10 @@ import { Profile } from './pages/Profile';
 import { VerifyEmail } from './pages/VerifyEmail';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import { Sell } from './pages/Sell';
+import { EditListing } from './pages/EditListing';
+import { MyListings } from './pages/MyListings';
+import { ListingDetail } from './pages/ListingDetail';
 
 export function App() {
   return (
@@ -26,6 +30,31 @@ export function App() {
               <Route path="/verify-email/:token" element={<VerifyEmail />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/listings/:id" element={<ListingDetail />} />
+              <Route
+                path="/sell"
+                element={
+                  <ProtectedRoute>
+                    <Sell />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/my-listings"
+                element={
+                  <ProtectedRoute>
+                    <MyListings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/listings/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <EditListing />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/dashboard"
                 element={

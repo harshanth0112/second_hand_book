@@ -3,6 +3,12 @@ import { logger } from '../utils/logger.js';
 export const errorHandler = (err, req, res, next) => {
   logger.error(err.stack || err.message);
 
+  if (err.name === 'CastError') {
+    return res.status(400).json({
+      message: 'Invalid id format',
+    });
+  }
+
   if (err.name === 'ValidationError') {
     const errors = Object.keys(err.errors).map((field) => ({
       field,

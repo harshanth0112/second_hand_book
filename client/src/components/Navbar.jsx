@@ -26,6 +26,20 @@ export const Navbar = () => {
             {user ? (
               <div className="flex items-center gap-3 sm:gap-4">
                 <Link
+                  to="/sell"
+                  className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 rounded-lg shadow-sm transition"
+                >
+                  Sell a Book
+                </Link>
+
+                <Link
+                  to="/my-listings"
+                  className="text-sm font-medium text-gray-700 hover:text-blue-600 transition"
+                >
+                  My Listings
+                </Link>
+
+                <Link
                   to="/dashboard"
                   className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-blue-600 transition"
                   title="Dashboard"

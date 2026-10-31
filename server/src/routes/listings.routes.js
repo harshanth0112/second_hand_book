@@ -16,12 +16,14 @@ import {
 } from '../validators/listing.validator.js';
 import { createRequestSchema } from '../validators/request.validator.js';
 import { RequestController } from '../controllers/request.controller.js';
+import { TrustController } from '../controllers/trust.controller.js';
 
 const router = Router();
 
-// Search listings (public)
+// Search listings (public, optional auth to exclude blocked sellers)
 router.get(
   '/',
+  optionalAuth,
   validateQuery(searchQuerySchema),
   ListingController.searchListings
 );
@@ -117,6 +119,14 @@ router.post(
   requireAuth,
   validateParams(listingIdParamsSchema),
   ListingController.relist
+);
+
+// Report listing
+router.post(
+  '/:id/report',
+  requireAuth,
+  validateParams(listingIdParamsSchema),
+  TrustController.reportListing
 );
 
 export default router;

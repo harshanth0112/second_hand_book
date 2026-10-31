@@ -4,7 +4,7 @@ import { IsbnService } from '../services/isbn.service.js';
 export class ListingController {
   static async searchListings(req, res, next) {
     try {
-      const results = await ListingService.searchListings(req.query);
+      const results = await ListingService.searchListings(req.query, req.user);
       return res.status(200).json(results);
     } catch (error) {
       next(error);

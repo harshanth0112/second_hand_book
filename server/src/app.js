@@ -13,6 +13,8 @@ import conversationRoutes from './routes/conversations.routes.js';
 import messageRoutes from './routes/messages.routes.js';
 import notificationRoutes from './routes/notifications.routes.js';
 import wantedRoutes from './routes/wanted.routes.js';
+import reviewRoutes from './routes/reviews.routes.js';
+import userRoutes from './routes/users.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export const createApp = () => {
@@ -43,6 +45,8 @@ export const createApp = () => {
   app.use('/api/messages', messageRoutes);
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/wanted', wantedRoutes);
+  app.use('/api/reviews', reviewRoutes);
+  app.use('/api/users', userRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

@@ -21,6 +21,7 @@ import { Chat } from './pages/Chat';
 import { Wishlist } from './pages/Wishlist';
 import { Wanted } from './pages/Wanted';
 import { Notifications } from './pages/Notifications';
+import { UserProfile } from './pages/UserProfile';
 
 export function App() {
   return (
@@ -38,6 +39,7 @@ export function App() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/listings/:id" element={<ListingDetail />} />
+                <Route path="/users/:id" element={<UserProfile />} />
                 <Route
                   path="/sell"
                   element={

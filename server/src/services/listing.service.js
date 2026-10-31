@@ -255,7 +255,7 @@ export class ListingService {
     sort = 'newest',
     page = 1,
     limit = 12,
-  }) {
+  }, user = null) {
     const andConditions = [{ status: 'available' }];
 
     if (q) {
@@ -292,7 +292,9 @@ export class ListingService {
       andConditions.push({ price: priceFilter });
     }
 
-    // TODO(step 8): exclude listings from sellers they have blocked
+    if (user && user.blockedUsers && user.blockedUsers.length > 0) {
+      andConditions.push({ seller: { $nin: user.blockedUsers } });
+    }
 
     const filter = andConditions.length === 1 ? andConditions[0] : { $and: andConditions };
 

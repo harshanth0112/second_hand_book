@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
 import { ListingController } from '../controllers/listing.controller.js';
+import { TrustController } from '../controllers/trust.controller.js';
 import {
   addToWishlist,
   removeFromWishlist,
@@ -19,6 +20,9 @@ router.use(requireAuth);
 
 // GET /api/me — return current user profile
 router.get('/', AuthController.getProfile);
+
+// GET /api/me/dashboard — seller dashboard stats
+router.get('/dashboard', TrustController.getSellerDashboard);
 
 // PUT /api/me — update profile fields
 router.put('/', validateBody(updateProfileSchema), AuthController.updateProfile);

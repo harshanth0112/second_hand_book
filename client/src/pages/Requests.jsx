@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getSentRequests, getReceivedRequests, patchRequestAction } from '../api/requests';
 import { AcceptRequestModal } from '../components/AcceptRequestModal';
+import { ReviewModal } from '../components/ReviewModal';
 import {
   Inbox,
   Send,
@@ -13,6 +14,7 @@ import {
   AlertCircle,
   Clock,
   BookOpen,
+  Star,
 } from 'lucide-react';
 
 export function Requests() {
@@ -26,6 +28,7 @@ export function Requests() {
   // Accept modal state
   const [acceptingRequest, setAcceptingRequest] = useState(null);
   const [submittingAction, setSubmittingAction] = useState(false);
+  const [reviewingRequest, setReviewingRequest] = useState(null);
 
   const loadRequests = async () => {
     setLoading(true);
@@ -286,10 +289,22 @@ export function Requests() {
                   )}
 
                   {item.status === 'completed' && (
-                    <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-semibold">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      Handover Complete & Book Sold
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-semibold">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        Handover Complete
+                      </span>
+
+                      {isBuyer && (
+                        <button
+                          onClick={() => setReviewingRequest(item)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition"
+                        >
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                          Rate Seller
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -306,6 +321,16 @@ export function Requests() {
           onClose={() => setAcceptingRequest(null)}
           onAccept={handleAction}
           accepting={submittingAction}
+        />
+      )}
+
+      {/* Review Modal */}
+      {reviewingRequest && (
+        <ReviewModal
+          request={reviewingRequest}
+          isOpen={Boolean(reviewingRequest)}
+          onClose={() => setReviewingRequest(null)}
+          onReviewed={() => loadRequests()}
         />
       )}
     </div>

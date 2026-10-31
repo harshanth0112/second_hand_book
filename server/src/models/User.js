@@ -84,6 +84,15 @@ const userSchema = new mongoose.Schema(
       ref: 'Listing',
       default: [],
     },
+    blockedUsers: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
+    },
+    isBanned: {
+      type: Boolean,
+      default: false,
+    },
     // Authentication providers
     authProviders: {
       type: [String],

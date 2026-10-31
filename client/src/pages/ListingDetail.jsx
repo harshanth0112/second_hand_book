@@ -5,9 +5,11 @@ import { getListing } from '../api/listings';
 import { createBookRequest } from '../api/requests';
 import { startConversation } from '../api/chat';
 import { addToWishlist, removeFromWishlist } from '../api/wanted';
+import { reportListing } from '../api/trust';
 import { RequestModal } from '../components/RequestModal';
+import { ReportModal } from '../components/ReportModal';
 import { useNavigate } from 'react-router-dom';
-import { Eye, Calendar, BookOpen, AlertCircle, ArrowLeft, Tag, Layers, GraduationCap, CheckCircle, Heart } from 'lucide-react';
+import { Eye, Calendar, BookOpen, AlertCircle, ArrowLeft, Tag, Layers, GraduationCap, CheckCircle, Heart, Flag } from 'lucide-react';
 
 export function ListingDetail() {
   const { id } = useParams();
@@ -25,6 +27,7 @@ export function ListingDetail() {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isRequestSubmitting, setIsRequestSubmitting] = useState(false);
   const [requestSuccess, setRequestSuccess] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -211,23 +214,40 @@ export function ListingDetail() {
                   {listing.seller?.name ? listing.seller.name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">{listing.seller?.name || 'Fellow Student'}</h4>
+                  <Link
+                    to={`/users/${listing.seller?._id}`}
+                    className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition"
+                  >
+                    {listing.seller?.name || 'Fellow Student'}
+                  </Link>
                   <p className="text-xs text-gray-500">
                     {listing.seller?.department ? `${listing.seller.department}` : 'Student'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <span className="flex items-center gap-1">
-                  <Eye className="w-3.5 h-3.5" />
-                  {listing.views}
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {new Date(listing.createdAt).toLocaleDateString()}
-                </span>
+              <div className="flex items-center gap-3">
+                {user && !isOwner && (
+                  <button
+                    onClick={() => setIsReportModalOpen(true)}
+                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition"
+                    title="Report this listing"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                    Report
+                  </button>
+                )}
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <span className="flex items-center gap-1">
+                    <Eye className="w-3.5 h-3.5" />
+                    {listing.views}
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {new Date(listing.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -324,6 +344,14 @@ export function ListingDetail() {
         onClose={() => setIsRequestModalOpen(false)}
         onSubmit={handleCreateRequest}
         submitting={isRequestSubmitting}
+      />
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        targetType="listing"
+        targetId={listing._id}
+        onSubmit={reportListing}
       />
     </div>
   );

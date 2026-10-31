@@ -3,6 +3,7 @@ import { Request } from '../models/Request.js';
 import { Listing } from '../models/Listing.js';
 import { MeetupPoint } from '../models/MeetupPoint.js';
 import { Conversation } from '../models/Conversation.js';
+import { User } from '../models/User.js';
 import { notify } from './notification.service.js';
 
 export class RequestService {
@@ -16,6 +17,21 @@ export class RequestService {
 
     if (listing.seller.equals(buyerId)) {
       const err = new Error('You cannot request your own listing');
+      err.status = 403;
+      throw err;
+    }
+
+    // Check if either user has blocked the other
+    const [buyer, seller] = await Promise.all([
+      User.findById(buyerId).select('blockedUsers').lean(),
+      User.findById(listing.seller).select('blockedUsers').lean(),
+    ]);
+
+    const buyerBlocked = buyer?.blockedUsers?.some((id) => id.equals(listing.seller));
+    const sellerBlocked = seller?.blockedUsers?.some((id) => id.equals(buyerId));
+
+    if (buyerBlocked || sellerBlocked) {
+      const err = new Error('Cannot send request due to user block');
       err.status = 403;
       throw err;
     }

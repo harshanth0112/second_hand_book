@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Conversation } from '../models/Conversation.js';
 import { Message } from '../models/Message.js';
 import { Listing } from '../models/Listing.js';
+import { User } from '../models/User.js';
 
 export class ChatService {
   static async startConversation(buyerId, listingId) {
@@ -14,6 +15,21 @@ export class ChatService {
 
     if (listing.seller.equals(buyerId)) {
       const err = new Error('You cannot start a chat on your own listing');
+      err.status = 403;
+      throw err;
+    }
+
+    // Check if either user has blocked the other
+    const [buyer, seller] = await Promise.all([
+      User.findById(buyerId).select('blockedUsers').lean(),
+      User.findById(listing.seller).select('blockedUsers').lean(),
+    ]);
+
+    const buyerBlocked = buyer?.blockedUsers?.some((id) => id.equals(listing.seller));
+    const sellerBlocked = seller?.blockedUsers?.some((id) => id.equals(buyerId));
+
+    if (buyerBlocked || sellerBlocked) {
+      const err = new Error('Cannot start conversation due to user block');
       err.status = 403;
       throw err;
     }

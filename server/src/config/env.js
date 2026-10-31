@@ -25,6 +25,11 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().optional().default(''),
   CLOUDINARY_API_KEY: z.string().optional().default(''),
   CLOUDINARY_API_SECRET: z.string().optional().default(''),
+  // Admin seed
+  ADMIN_EMAIL: z.string().optional().default('admin@college.edu'),
+  ADMIN_PASSWORD: z.string().optional().default('Admin1234!'),
+  // Background jobs
+  JOBS_ENABLED: z.string().optional().default('false').transform((val) => val === 'true'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -57,4 +62,7 @@ export const env = parsedEnv.success
       CLOUDINARY_CLOUD_NAME: '',
       CLOUDINARY_API_KEY: '',
       CLOUDINARY_API_SECRET: '',
+      ADMIN_EMAIL: 'admin@college.edu',
+      ADMIN_PASSWORD: 'Admin1234!',
+      JOBS_ENABLED: false,
     };

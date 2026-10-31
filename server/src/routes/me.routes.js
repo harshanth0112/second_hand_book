@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
 import { ListingController } from '../controllers/listing.controller.js';
 import { TrustController } from '../controllers/trust.controller.js';
+import { PrivacyController } from '../controllers/privacy.controller.js';
 import {
   addToWishlist,
   removeFromWishlist,
@@ -12,6 +13,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { changePasswordSchema, updateProfileSchema } from '../validators/auth.validator.js';
 import { myListingsQuerySchema } from '../validators/listing.validator.js';
 import { wishlistQuerySchema } from '../validators/notification.validator.js';
+import { deleteAccountSchema } from '../validators/admin.validator.js';
 
 const router = Router();
 
@@ -37,6 +39,10 @@ router.get('/listings', validateQuery(myListingsQuerySchema), ListingController.
 router.get('/wishlist', validateQuery(wishlistQuerySchema), getWishlist);
 router.post('/wishlist/:listingId', addToWishlist);
 router.delete('/wishlist/:listingId', removeFromWishlist);
+
+// Privacy routes (Export & Deletion)
+router.get('/export', PrivacyController.exportData);
+router.delete('/', validateBody(deleteAccountSchema), PrivacyController.deleteAccount);
 
 export default router;
 

@@ -15,6 +15,7 @@ import notificationRoutes from './routes/notifications.routes.js';
 import wantedRoutes from './routes/wanted.routes.js';
 import reviewRoutes from './routes/reviews.routes.js';
 import userRoutes from './routes/users.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export const createApp = () => {
@@ -47,6 +48,7 @@ export const createApp = () => {
   app.use('/api/wanted', wantedRoutes);
   app.use('/api/reviews', reviewRoutes);
   app.use('/api/users', userRoutes);
+  app.use('/api/admin', adminRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

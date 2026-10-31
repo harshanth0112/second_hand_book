@@ -11,7 +11,12 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Download,
+  Trash2,
+  Shield,
 } from 'lucide-react';
+import { exportUserData } from '../api/privacy';
+import { DeleteAccountModal } from '../components/DeleteAccountModal';
 
 export const Profile = () => {
   const { user, updateUser, refreshUser } = useAuth();
@@ -194,6 +199,22 @@ export const Profile = () => {
     user?.authProviders &&
     user.authProviders.includes('google') &&
     !user.authProviders.includes('local');
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+
+  const handleExportData = async () => {
+    setExporting(true);
+    setExportError('');
+    try {
+      await exportUserData();
+    } catch (err) {
+      setExportError(err.message || 'Failed to export data');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
@@ -560,6 +581,72 @@ export const Profile = () => {
           )}
         </div>
       </div>
+
+      {/* Data & Privacy Card */}
+      <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-200">
+        <div className="flex items-center gap-2 border-b border-gray-100 pb-4 mb-6">
+          <Shield className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-bold text-gray-900">Data & Privacy</h3>
+        </div>
+
+        {exportError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{exportError}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="p-5 bg-gray-50 rounded-xl border border-gray-100 flex flex-col justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-gray-900 mb-1">Export Personal Data</h4>
+              <p className="text-xs text-gray-600 mb-4 leading-relaxed">
+                Download a complete, machine-readable JSON archive of your textbook listings, messages, offers, and requests.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleExportData}
+              disabled={exporting}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50"
+            >
+              {exporting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Generating Archive...
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  Export My Data (JSON)
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="p-5 bg-red-50/50 rounded-xl border border-red-100 flex flex-col justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-red-950 mb-1">Delete Account</h4>
+              <p className="text-xs text-red-700/80 mb-4 leading-relaxed">
+                Permanently close your account, remove your active book listings, and anonymize all personal data.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete My Account
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <DeleteAccountModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+      />
     </div>
   );
 };

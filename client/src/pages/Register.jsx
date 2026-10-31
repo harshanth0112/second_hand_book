@@ -298,6 +298,13 @@ export const Register = () => {
               )}
             </button>
           </div>
+
+          <p className="mt-3 text-xs text-center text-gray-500">
+            By creating an account, you agree to our{' '}
+            <Link to="/privacy" className="text-blue-600 hover:underline font-medium">
+              Privacy Policy
+            </Link>.
+          </p>
         </form>
       </div>
     </div>

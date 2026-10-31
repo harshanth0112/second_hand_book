@@ -62,9 +62,15 @@ export class AuthService {
 
   static async login({ email, password }) {
     const user = await User.findOne({ email });
-    if (!user) {
+    if (!user || user.deletedAt) {
       const err = new Error('Invalid email or password');
       err.status = 401;
+      throw err;
+    }
+
+    if (user.isBanned) {
+      const err = new Error('Your account has been banned');
+      err.status = 403;
       throw err;
     }
 

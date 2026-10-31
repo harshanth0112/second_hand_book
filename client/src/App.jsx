@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { Navbar } from './components/Navbar';
@@ -22,6 +22,8 @@ import { Wishlist } from './pages/Wishlist';
 import { Wanted } from './pages/Wanted';
 import { Notifications } from './pages/Notifications';
 import { UserProfile } from './pages/UserProfile';
+import { Privacy } from './pages/Privacy';
+import { Admin } from './pages/Admin';
 
 export function App() {
   return (
@@ -38,6 +40,7 @@ export function App() {
                 <Route path="/verify-email/:token" element={<VerifyEmail />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/privacy" element={<Privacy />} />
                 <Route path="/listings/:id" element={<ListingDetail />} />
                 <Route path="/users/:id" element={<UserProfile />} />
                 <Route
@@ -128,9 +131,27 @@ export function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <Admin />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
+            <footer className="border-t border-gray-200 bg-white py-6 text-center text-xs text-gray-500">
+              <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <p>© {new Date().getFullYear()} Campus Book Exchange. All rights reserved.</p>
+                <div className="flex items-center gap-4">
+                  <Link to="/privacy" className="hover:text-blue-600 transition">
+                    Privacy Policy
+                  </Link>
+                </div>
+              </div>
+            </footer>
           </div>
         </BrowserRouter>
       </SocketProvider>

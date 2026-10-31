@@ -22,9 +22,15 @@ export const requireAuth = async (req, res, next) => {
     }
 
     const user = await User.findById(decoded.sub);
-    if (!user) {
+    if (!user || user.deletedAt) {
       return res.status(401).json({
         message: 'User no longer exists',
+      });
+    }
+
+    if (user.isBanned) {
+      return res.status(403).json({
+        message: 'Your account has been banned',
       });
     }
 
@@ -49,4 +55,20 @@ export const requireAuth = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+export const requireRole = (role) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      message: 'Authentication required',
+    });
+  }
+
+  if (req.user.role !== role) {
+    return res.status(403).json({
+      message: 'Forbidden: insufficient permissions',
+    });
+  }
+
+  next();
 };

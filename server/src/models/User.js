@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       match: [
-        /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+        /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+(\.[a-zA-Z]{2,})?$/,
         'Please provide a valid email address',
       ],
     },
@@ -92,6 +92,10 @@ const userSchema = new mongoose.Schema(
     isBanned: {
       type: Boolean,
       default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     },
     // Authentication providers
     authProviders: {

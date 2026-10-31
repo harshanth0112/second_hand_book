@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { BookOpen, LogOut, User as UserIcon, Settings, MessageSquare, Heart } from 'lucide-react';
+import { BookOpen, LogOut, User as UserIcon, Settings, MessageSquare, Heart, ShieldAlert } from 'lucide-react';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { NotificationBell } from './NotificationBell';
 
@@ -88,6 +88,17 @@ export const Navbar = () => {
                   <UserIcon className="w-4 h-4" />
                   <span className="hidden sm:inline">{user.name}</span>
                 </Link>
+
+                {user?.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    className="flex items-center gap-1 text-sm font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 transition px-2.5 py-1.5 rounded-lg border border-red-200"
+                    title="Admin Console"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Admin</span>
+                  </Link>
+                )}
 
                 <Link
                   to="/profile"

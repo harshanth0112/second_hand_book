@@ -3,12 +3,15 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getListing } from '../api/listings';
 import { createBookRequest } from '../api/requests';
+import { startConversation } from '../api/chat';
 import { RequestModal } from '../components/RequestModal';
+import { useNavigate } from 'react-router-dom';
 import { Eye, Calendar, BookOpen, AlertCircle, ArrowLeft, Tag, Layers, GraduationCap, CheckCircle } from 'lucide-react';
 
 export function ListingDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -256,13 +259,18 @@ export function ListingDetail() {
                       </Link>
                     )}
 
-                    {/* TODO(step 6): Connect Chat button */}
                     <button
-                      disabled
-                      title="Live chat will be enabled in Step 6"
-                      className="px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg opacity-60 cursor-not-allowed"
+                      onClick={async () => {
+                        try {
+                          const conv = await startConversation(listing._id);
+                          navigate(`/chat/${conv._id}`);
+                        } catch (err) {
+                          alert(err.message || 'Failed to start chat');
+                        }
+                      }}
+                      className="px-4 py-2.5 border border-gray-300 hover:border-gray-400 text-gray-700 text-sm font-semibold rounded-lg transition"
                     >
-                      Chat (Step 6)
+                      Chat with Seller
                     </button>
                   </>
                 )}

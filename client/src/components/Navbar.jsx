@@ -1,11 +1,13 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, LogOut, User as UserIcon, Settings } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
+import { BookOpen, LogOut, User as UserIcon, Settings, MessageSquare } from 'lucide-react';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 
 export const Navbar = () => {
   const { user, logout } = useAuth();
+  const { unreadTotal } = useSocket() || {};
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -44,6 +46,19 @@ export const Navbar = () => {
                   className="text-sm font-medium text-gray-700 hover:text-blue-600 transition"
                 >
                   Requests
+                </Link>
+
+                <Link
+                  to="/chat"
+                  className="relative flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-blue-600 transition"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span className="hidden sm:inline">Chat</span>
+                  {unreadTotal > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center">
+                      {unreadTotal > 9 ? '9+' : unreadTotal}
+                    </span>
+                  )}
                 </Link>
 
                 <Link

@@ -9,6 +9,8 @@ import meRoutes from './routes/me.routes.js';
 import listingRoutes from './routes/listings.routes.js';
 import requestRoutes from './routes/requests.routes.js';
 import meetupPointRoutes from './routes/meetupPoints.routes.js';
+import conversationRoutes from './routes/conversations.routes.js';
+import messageRoutes from './routes/messages.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export const createApp = () => {
@@ -35,6 +37,8 @@ export const createApp = () => {
   app.use('/api/listings', listingRoutes);
   app.use('/api/requests', requestRoutes);
   app.use('/api/meetup-points', meetupPointRoutes);
+  app.use('/api/conversations', conversationRoutes);
+  app.use('/api/messages', messageRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

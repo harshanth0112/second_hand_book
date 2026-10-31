@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Request } from '../models/Request.js';
 import { Listing } from '../models/Listing.js';
 import { MeetupPoint } from '../models/MeetupPoint.js';
+import { Conversation } from '../models/Conversation.js';
 
 export class RequestService {
   static async createRequest(listingId, buyerId, { message = '', offeredBook = '' }) {
@@ -43,6 +44,16 @@ export class RequestService {
       throw err;
     }
 
+    // Check if there is an agreed price negotiated via chat
+    let agreedPrice = null;
+    const existingConv = await Conversation.findOne({
+      listing: listingId,
+      buyer: buyerId,
+    });
+    if (existingConv && existingConv.agreedPrice) {
+      agreedPrice = existingConv.agreedPrice;
+    }
+
     const request = await Request.create({
       listing: listingId,
       seller: listing.seller,
@@ -50,6 +61,7 @@ export class RequestService {
       status: 'pending',
       message,
       offeredBook,
+      agreedPrice,
     });
 
     return request;

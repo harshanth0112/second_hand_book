@@ -28,9 +28,11 @@ export const errorHandler = (err, req, res, next) => {
   }
 
   if (err.status) {
-    return res.status(err.status).json({
-      message: err.message,
-    });
+    const response = { message: err.message };
+    if (err.errors) {
+      response.errors = err.errors;
+    }
+    return res.status(err.status).json(response);
   }
 
   res.status(500).json({

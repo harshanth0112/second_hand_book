@@ -7,6 +7,8 @@ import { configurePassport } from './config/passport.js';
 import authRoutes from './routes/auth.routes.js';
 import meRoutes from './routes/me.routes.js';
 import listingRoutes from './routes/listings.routes.js';
+import requestRoutes from './routes/requests.routes.js';
+import meetupPointRoutes from './routes/meetupPoints.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export const createApp = () => {
@@ -31,6 +33,8 @@ export const createApp = () => {
   app.use('/api/auth', authRoutes);
   app.use('/api/me', meRoutes);
   app.use('/api/listings', listingRoutes);
+  app.use('/api/requests', requestRoutes);
+  app.use('/api/meetup-points', meetupPointRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

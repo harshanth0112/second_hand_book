@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getListing } from '../api/listings';
-import { Eye, Calendar, BookOpen, AlertCircle, ArrowLeft, Tag, Layers, GraduationCap } from 'lucide-react';
+import { createBookRequest } from '../api/requests';
+import { RequestModal } from '../components/RequestModal';
+import { Eye, Calendar, BookOpen, AlertCircle, ArrowLeft, Tag, Layers, GraduationCap, CheckCircle } from 'lucide-react';
 
 export function ListingDetail() {
   const { id } = useParams();
@@ -12,6 +14,11 @@ export function ListingDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+
+  // Request modal state
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isRequestSubmitting, setIsRequestSubmitting] = useState(false);
+  const [requestSuccess, setRequestSuccess] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -47,6 +54,16 @@ export function ListingDetail() {
       </div>
     );
   }
+
+  const handleCreateRequest = async (payload) => {
+    setIsRequestSubmitting(true);
+    try {
+      await createBookRequest(listing._id, payload);
+      setRequestSuccess(true);
+    } finally {
+      setIsRequestSubmitting(false);
+    }
+  };
 
   const isOwner = user && listing.seller?._id === user._id;
 
@@ -203,40 +220,65 @@ export function ListingDetail() {
               </div>
             </div>
 
-            {/* Action buttons (Placeholders for Steps 5 & 6) */}
-            <div className="mt-6 flex gap-3">
-              {isOwner ? (
-                <Link
-                  to={`/listings/${listing._id}/edit`}
-                  className="w-full text-center py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg transition"
-                >
-                  Edit This Listing
-                </Link>
-              ) : (
-                <>
-                  {/* TODO(step 5): Connect Request Book modal */}
-                  <button
-                    disabled
-                    title="Book requests will be enabled in Step 5"
-                    className="flex-1 py-2.5 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg opacity-60 cursor-not-allowed"
-                  >
-                    Request Book (Step 5)
-                  </button>
-
-                  {/* TODO(step 6): Connect Chat button */}
-                  <button
-                    disabled
-                    title="Live chat will be enabled in Step 6"
-                    className="px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg opacity-60 cursor-not-allowed"
-                  >
-                    Chat (Step 6)
-                  </button>
-                </>
+            {/* Action buttons */}
+            <div className="mt-6 flex flex-col gap-3">
+              {requestSuccess && (
+                <div className="p-3 bg-emerald-50 text-emerald-800 text-xs rounded-lg border border-emerald-200 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+                  <span>Request sent successfully! You can track it in your Requests dashboard.</span>
+                </div>
               )}
+
+              <div className="flex gap-3">
+                {isOwner ? (
+                  <Link
+                    to={`/listings/${listing._id}/edit`}
+                    className="w-full text-center py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg transition"
+                  >
+                    Edit This Listing
+                  </Link>
+                ) : (
+                  <>
+                    {user ? (
+                      <button
+                        onClick={() => setIsRequestModalOpen(true)}
+                        disabled={listing.status !== 'available' || requestSuccess}
+                        className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
+                      >
+                        {listing.status !== 'available' ? 'Not Available' : 'Request Book'}
+                      </button>
+                    ) : (
+                      <Link
+                        to="/login"
+                        className="flex-1 text-center py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition"
+                      >
+                        Sign in to Request
+                      </Link>
+                    )}
+
+                    {/* TODO(step 6): Connect Chat button */}
+                    <button
+                      disabled
+                      title="Live chat will be enabled in Step 6"
+                      className="px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg opacity-60 cursor-not-allowed"
+                    >
+                      Chat (Step 6)
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      <RequestModal
+        listing={listing}
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+        onSubmit={handleCreateRequest}
+        submitting={isRequestSubmitting}
+      />
     </div>
   );
 }

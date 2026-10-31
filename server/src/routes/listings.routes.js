@@ -14,6 +14,8 @@ import {
   priceHintQuerySchema,
   isbnParamsSchema,
 } from '../validators/listing.validator.js';
+import { createRequestSchema } from '../validators/request.validator.js';
+import { RequestController } from '../controllers/request.controller.js';
 
 const router = Router();
 
@@ -63,6 +65,15 @@ router.get(
   optionalAuth,
   validateParams(listingIdParamsSchema),
   ListingController.getListing
+);
+
+// Create listing request
+router.post(
+  '/:id/requests',
+  requireAuth,
+  validateParams(listingIdParamsSchema),
+  validateBody(createRequestSchema),
+  RequestController.createRequest
 );
 
 // Update listing

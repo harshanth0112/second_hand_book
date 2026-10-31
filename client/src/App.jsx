@@ -15,6 +15,7 @@ import { Sell } from './pages/Sell';
 import { EditListing } from './pages/EditListing';
 import { MyListings } from './pages/MyListings';
 import { ListingDetail } from './pages/ListingDetail';
+import { Requests } from './pages/Requests';
 
 export function App() {
   return (
@@ -44,6 +45,14 @@ export function App() {
                 element={
                   <ProtectedRoute>
                     <MyListings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/requests"
+                element={
+                  <ProtectedRoute>
+                    <Requests />
                   </ProtectedRoute>
                 }
               />

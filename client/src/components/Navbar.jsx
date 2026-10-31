@@ -40,6 +40,13 @@ export const Navbar = () => {
                 </Link>
 
                 <Link
+                  to="/requests"
+                  className="text-sm font-medium text-gray-700 hover:text-blue-600 transition"
+                >
+                  Requests
+                </Link>
+
+                <Link
                   to="/dashboard"
                   className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-blue-600 transition"
                   title="Dashboard"

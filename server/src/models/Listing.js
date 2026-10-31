@@ -130,6 +130,25 @@ const listingSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    reservedFor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    buyer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    soldAt: {
+      type: Date,
+      default: null,
+    },
+    handoverConfirmedBy: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
+    },
   },
   {
     timestamps: true,

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DEPARTMENTS } from '../constants';
+import { lookupIsbn, getPriceHint } from '../api/listings';
+import { Sparkles, TrendingUp, AlertCircle } from 'lucide-react';
 
 export function ListingForm({ initialValues = {}, onSubmit, isSubmitting = false }) {
   const [formData, setFormData] = useState({
@@ -15,9 +17,13 @@ export function ListingForm({ initialValues = {}, onSubmit, isSubmitting = false
     price: initialValues.price ?? 100,
     swapFor: initialValues.swapFor || '',
     note: initialValues.note || '',
+    coverUrl: initialValues.coverUrl || '',
   });
 
   const [fieldErrors, setFieldErrors] = useState({});
+  const [isbnLoading, setIsbnLoading] = useState(false);
+  const [isbnMessage, setIsbnMessage] = useState({ text: '', isError: false });
+  const [priceHint, setPriceHint] = useState(null);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -25,6 +31,65 @@ export function ListingForm({ initialValues = {}, onSubmit, isSubmitting = false
       ...prev,
       [name]: type === 'number' ? (value === '' ? '' : parseInt(value, 10)) : value,
     }));
+  };
+
+  // Debounced Price Hint lookup based on title or isbn
+  useEffect(() => {
+    if (formData.listingType !== 'sell') {
+      setPriceHint(null);
+      return;
+    }
+
+    if (!formData.isbn && !formData.title) {
+      setPriceHint(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const hintRes = await getPriceHint({
+          isbn: formData.isbn ? formData.isbn.replace(/[-\s]/g, '') : undefined,
+          title: !formData.isbn ? formData.title : undefined,
+        });
+        if (hintRes?.hint) {
+          setPriceHint(hintRes.hint);
+        } else {
+          setPriceHint(null);
+        }
+      } catch {
+        setPriceHint(null);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [formData.isbn, formData.title, formData.listingType]);
+
+  const handleIsbnFill = async () => {
+    if (!formData.isbn) {
+      setIsbnMessage({ text: 'Please enter an ISBN first', isError: true });
+      return;
+    }
+
+    setIsbnLoading(true);
+    setIsbnMessage({ text: '', isError: false });
+
+    try {
+      const book = await lookupIsbn(formData.isbn);
+      setFormData((prev) => ({
+        ...prev,
+        title: book.title || prev.title,
+        author: book.author || prev.author,
+        coverUrl: book.coverUrl || prev.coverUrl,
+      }));
+      setIsbnMessage({ text: 'Book details populated from Open Library!', isError: false });
+    } catch (err) {
+      setIsbnMessage({
+        text: err.status === 404 ? 'Book not found for this ISBN' : (err.message || 'Lookup failed'),
+        isError: true,
+      });
+    } finally {
+      setIsbnLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -54,6 +119,7 @@ export function ListingForm({ initialValues = {}, onSubmit, isSubmitting = false
     if (!payload.isbn) delete payload.isbn;
     if (!payload.courseCode) delete payload.courseCode;
     if (!payload.note) delete payload.note;
+    if (!payload.coverUrl) delete payload.coverUrl;
 
     try {
       await onSubmit(payload);
@@ -70,6 +136,38 @@ export function ListingForm({ initialValues = {}, onSubmit, isSubmitting = false
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+      {/* ISBN Autofill Helper */}
+      <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-lg">
+        <label className="block text-xs font-semibold text-blue-900 mb-1.5 uppercase tracking-wider">
+          Fast-Fill via ISBN (Optional)
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            name="isbn"
+            value={formData.isbn}
+            onChange={handleChange}
+            placeholder="Enter 10 or 13-digit ISBN (e.g. 9780132350884)"
+            className="flex-1 px-3 py-2 bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+          />
+          <button
+            type="button"
+            onClick={handleIsbnFill}
+            disabled={isbnLoading}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition disabled:opacity-50 shrink-0"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {isbnLoading ? 'Looking up...' : 'Fill Details'}
+          </button>
+        </div>
+
+        {isbnMessage.text && (
+          <p className={`text-xs mt-2 ${isbnMessage.isError ? 'text-red-600 font-medium' : 'text-emerald-700 font-medium'}`}>
+            {isbnMessage.text}
+          </p>
+        )}
+      </div>
+
       {/* Listing Type Radio Cards */}
       <div>
         <label className="block text-sm font-semibold text-gray-800 mb-2">Listing Type</label>
@@ -159,6 +257,16 @@ export function ListingForm({ initialValues = {}, onSubmit, isSubmitting = false
             />
           </div>
           {fieldErrors.price && <p className="text-xs text-red-600 mt-1">{fieldErrors.price}</p>}
+
+          {/* Dynamic Price Hint Line */}
+          {priceHint && (
+            <div className="flex items-center gap-1.5 mt-2 text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-100 max-w-md">
+              <TrendingUp className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span>
+                Campus Price Hint: typically ₹{priceHint.average} (ranges between ₹{priceHint.min} – ₹{priceHint.max})
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -233,7 +341,7 @@ export function ListingForm({ initialValues = {}, onSubmit, isSubmitting = false
       </div>
 
       {/* Optional Metadata */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
           <input
@@ -256,18 +364,6 @@ export function ListingForm({ initialValues = {}, onSubmit, isSubmitting = false
             onChange={handleChange}
             maxLength={20}
             placeholder="e.g. CS201"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">ISBN</label>
-          <input
-            type="text"
-            name="isbn"
-            value={formData.isbn}
-            onChange={handleChange}
-            placeholder="10 or 13 digits"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
           />
         </div>
@@ -299,4 +395,3 @@ export function ListingForm({ initialValues = {}, onSubmit, isSubmitting = false
     </form>
   );
 }
-

@@ -1,6 +1,34 @@
 import { ListingService } from '../services/listing.service.js';
+import { IsbnService } from '../services/isbn.service.js';
 
 export class ListingController {
+  static async searchListings(req, res, next) {
+    try {
+      const results = await ListingService.searchListings(req.query);
+      return res.status(200).json(results);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getPriceHint(req, res, next) {
+    try {
+      const hint = await ListingService.getPriceHint(req.user._id, req.query);
+      return res.status(200).json(hint);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async lookupIsbn(req, res, next) {
+    try {
+      const book = await IsbnService.lookup(req.params.isbn);
+      return res.status(200).json(book);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async createListing(req, res, next) {
     try {
       const listing = await ListingService.createListing(req.user._id, req.body);

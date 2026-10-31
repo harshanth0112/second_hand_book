@@ -111,6 +111,66 @@ export const myListingsQuerySchema = z
   })
   .strict();
 
+export const searchQuerySchema = z
+  .object({
+    q: z.string().trim().optional(),
+    subject: z.string().trim().optional(),
+    department: z.enum(DEPARTMENTS).optional(),
+    semester: z.coerce.number().int().min(1).max(8).optional(),
+    condition: z.string().trim().optional(), // Comma-separated list e.g. "good,fair"
+    listingType: z.enum(['sell', 'free', 'swap']).optional(),
+    minPrice: z.coerce.number().int().min(0).optional(),
+    maxPrice: z.coerce.number().int().min(0).optional(),
+    sort: z.enum(['newest', 'price_asc', 'price_desc', 'relevance']).default('newest'),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(12),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if (data.minPrice !== undefined && data.maxPrice !== undefined && data.minPrice > data.maxPrice) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['minPrice'],
+        message: 'minPrice cannot be greater than maxPrice',
+      });
+    }
+    if (data.sort === 'relevance' && !data.q) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sort'],
+        message: 'Sort by relevance is only valid with a search query',
+      });
+    }
+  });
+
+export const priceHintQuerySchema = z
+  .object({
+    isbn: z.string().trim().optional(),
+    title: z.string().trim().optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if (!data.isbn && !data.title) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['isbn'],
+        message: 'Either isbn or title must be provided',
+      });
+    }
+  });
+
+export const isbnParamsSchema = z
+  .object({
+    isbn: z
+      .string()
+      .trim()
+      .transform((val) => val.replace(/[-\s]/g, ''))
+      .refine((val) => /^\d{10}(\d{3})?$/.test(val), {
+        message: 'Invalid ISBN format. Must be 10 or 13 digits.',
+      }),
+  })
+  .strict();
+
 export const listingIdParamsSchema = z
   .object({
     id: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id format'),

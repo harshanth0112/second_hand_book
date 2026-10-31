@@ -10,9 +10,35 @@ import {
   listingIdParamsSchema,
   imageIndexParamsSchema,
   myListingsQuerySchema,
+  searchQuerySchema,
+  priceHintQuerySchema,
+  isbnParamsSchema,
 } from '../validators/listing.validator.js';
 
 const router = Router();
+
+// Search listings (public)
+router.get(
+  '/',
+  validateQuery(searchQuerySchema),
+  ListingController.searchListings
+);
+
+// Price hint (authenticated)
+router.get(
+  '/price-hint',
+  requireAuth,
+  validateQuery(priceHintQuerySchema),
+  ListingController.getPriceHint
+);
+
+// ISBN lookup (authenticated)
+router.get(
+  '/isbn/:isbn',
+  requireAuth,
+  validateParams(isbnParamsSchema),
+  ListingController.lookupIsbn
+);
 
 // Create listing
 router.post(

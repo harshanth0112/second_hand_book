@@ -44,6 +44,36 @@ export async function relistListing(id) {
   });
 }
 
+export async function searchListings(params = {}, signal) {
+  const query = new URLSearchParams();
+  for (const [key, val] of Object.entries(params)) {
+    if (val !== undefined && val !== null && val !== '') {
+      query.set(key, val);
+    }
+  }
+  const qs = query.toString();
+  return apiClient(`/listings${qs ? `?${qs}` : ''}`, {
+    method: 'GET',
+    signal,
+  });
+}
+
+export async function getPriceHint(params = {}) {
+  const query = new URLSearchParams();
+  if (params.isbn) query.set('isbn', params.isbn);
+  if (params.title) query.set('title', params.title);
+  const qs = query.toString();
+  return apiClient(`/listings/price-hint${qs ? `?${qs}` : ''}`, {
+    method: 'GET',
+  });
+}
+
+export async function lookupIsbn(isbn) {
+  return apiClient(`/listings/isbn/${encodeURIComponent(isbn)}`, {
+    method: 'GET',
+  });
+}
+
 export async function uploadListingImages(id, files) {
   const formData = new FormData();
   for (const file of files) {

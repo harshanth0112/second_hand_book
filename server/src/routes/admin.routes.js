@@ -31,3 +31,4 @@ router.post('/meetup-points', validateBody(createMeetupPointSchema), AdminContro
 router.patch('/meetup-points/:id', validateBody(updateMeetupPointSchema), AdminController.updateMeetupPoint);
 
 export default router;
+

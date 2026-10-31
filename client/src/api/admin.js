@@ -28,3 +28,4 @@ export async function createAdminMeetupPoint(data) {
 export async function updateAdminMeetupPoint(id, data) {
   return await apiClient.patch(`/api/admin/meetup-points/${id}`, data);
 }
+

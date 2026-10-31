@@ -21,6 +21,9 @@ import { errorHandler } from './middleware/errorHandler.js';
 export const createApp = () => {
   const app = express();
 
+  // Trust first proxy for secure cookies and accurate client IP detection in production
+  app.set('trust proxy', 1);
+
   app.use(
     cors({
       origin: env.CLIENT_URL,

@@ -19,3 +19,4 @@ export async function deleteAccount({ confirm, password }) {
     password,
   });
 }
+

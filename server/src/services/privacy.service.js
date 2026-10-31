@@ -165,3 +165,4 @@ export class PrivacyService {
     return { message: 'Account deleted successfully' };
   }
 }
+

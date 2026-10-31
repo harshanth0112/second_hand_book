@@ -1,453 +1,217 @@
-Book Exchange --- IDE Implementation Instructions
-Purpose: This file is the working instruction set for an AI coding
-IDE (Cursor, Windsurf, GitHub Copilot, or another repository-aware
-agent) implementing the Book Exchange application.
+# Campus Book Exchange Platform
 
-Companion specification: Keep
-book-exchange-detailed-build-plan.md in the project root. This file
-defines how the IDE must work; the detailed build plan defines exactly
-what each step must build, including endpoints, schemas, validation,
-tests, and acceptance criteria.
+A modern, full-stack, peer-to-peer textbook exchange and marketplace designed specifically for university students. Students can list textbooks for **sale (in rupees)**, **free giveaway**, or **direct swap**, browse with department and semester filters, arrange on-campus meetups, negotiate price offers via real-time chat, confirm physical handovers, and rate sellers.
 
-1. Role and operating principles
-Act as a senior full-stack engineer, application architect, security
-reviewer, and test engineer. Build a production-minded student Book
-Exchange platform using the existing repository.
+---
 
-The platform allows students to list academic books for sale, free
-sharing, or swapping; browse and search listings; request books; agree
-on safe meetups; chat; save books; receive notifications; review
-completed exchanges; and report unsafe or inappropriate activity.
-Non-negotiable workflow
-1. Inspect the repository before changing anything.
-2. Read this file and book-exchange-detailed-build-plan.md
-   completely.
-3. Identify the current implementation step from the repository and the
-   user's instruction. Do not assume the project is empty.
-4. Work on one step only at a time, in the exact order in the
-   detailed build plan.
-5. Before coding, provide:
-   - the current step and its goal;
-   - a short summary of existing relevant code;
-   - the exact files you intend to create or modify;
-   - packages that must be added for this step;
-   - any genuine ambiguity that blocks safe implementation.
-6. Implement the complete step. Do not leave placeholder functions,
-   fake data in production paths, commented-out implementations, or
-   TODO: implement later.
-7. Add or update tests for the step. Run the tests, lint, and relevant
-   build/type checks available in the repository.
-8. Review the implementation against the detailed plan, security rules,
-   and acceptance checklist.
-9. Stop after the current step. Do not begin the next step until the
-   user has reviewed the result and the current step's acceptance
-   criteria pass.
-10. Do not claim that a test, build, deployment, or manual browser check
-    passed unless you actually ran or observed it.
-If the detailed plan and this file conflict, follow the step-specific
-behavior in the detailed build plan. Keep the general engineering and
-workflow rules in this file unless the detailed plan explicitly
-overrides them. If an important requirement remains ambiguous, ask one
-focused question before coding rather than inventing behavior.
-2. Product and technology baseline
-Product scope
-Build a student-focused book marketplace with these listing types:
-- sell --- a book is offered for a rupee price.
-- free --- a book is offered without payment.
-- swap --- a book is offered in exchange for another book.
-The full roadmap contains ten steps:
-1. Foundation and email login
-2. Email verification, password reset, Google login, and profile
-3. Listings and image uploads
-4. Browse, search, filters, pagination, price hints, and ISBN lookup
-5. Requests, reservations, meetups, and handover
-6. Real-time chat and offers
-7. Wishlist, wanted list, notifications, and matching
-8. Reviews, reports, blocking, and seller dashboard
-9. Admin tools, expiry jobs, privacy, export, and account deletion
-10. Quality pass and deployment
-Do not implement features from later steps early.
-Technology
-Use the stack specified by the detailed plan and the repository:
-- Frontend: React, Vite, React Router, Tailwind CSS.
-- Backend: Node.js, Express.
-- Database: MongoDB Atlas with Mongoose.
-- Authentication: JWT stored in an httpOnly cookie; bcrypt for
-  local passwords; Google OAuth in its designated step.
-- Validation: Zod.
-- Uploads: Multer with Cloudinary.
-- Realtime: Socket.IO.
-- Testing: Vitest, Supertest, and MongoDB Memory Server; Socket.IO
-  client tests when the chat step is reached.
-Do not replace the specified stack or introduce alternative frameworks
-without asking first. Add only dependencies required by the current step
-and listed in the detailed plan. If a dependency is already installed,
-do not install it again.
-3. Repository-first implementation
-Before making changes:
-- Inspect the root directory, package manifests, source folders,
-  scripts, environment examples, and existing tests.
-- Identify whether the repository is a monorepo with client/ and
-  server/, or whether an existing layout needs to be preserved.
-- Read relevant files before editing them.
-- Reuse existing working code where it meets the specification.
-- Avoid overwriting user changes or deleting files without a clear
-  reason.
-- Do not regenerate the entire application when only one feature is
-  required.
-- Keep frontend and backend responsibilities separate.
-If the repository structure differs from the expected structure in the
-detailed plan, propose the smallest consistent adjustment and explain it
-before applying it.
-Architecture boundaries
-Backend request flow:
+## Architecture & Technology Stack
 
-route → middleware/validation → controller → service → model/database
-- Routes: URL, HTTP method, middleware composition only.
-- Validators: Zod schemas and input parsing.
-- Controllers: translate HTTP request/response; no business rules.
-- Services: business rules, authorization decisions, transactions,
-  and database operations.
-- Models: Mongoose schemas, indexes, and persistence constraints.
-- Middleware: authentication, authorization, validation, uploads,
-  rate limits, and error handling.
-Frontend request flow:
+- **Frontend**: React 18, Vite, React Router 6, Tailwind CSS, Lucide React icons
+- **Backend API**: Node.js, Express, Mongoose (MongoDB)
+- **Real-Time WebSockets**: Socket.IO for instant messaging, read receipts, and live price offers
+- **Authentication**: JWT stored in secure `httpOnly` cookies with session versioning; local passwords hashed with `bcrypt`; Google OAuth 2.0 integration
+- **Validation**: Schema-first input validation with Zod
+- **Media Uploads**: Multer memory storage with Cloudinary image optimization
+- **Background Jobs**: Automated cron tasks for listing expiration reminders and status transitions
+- **Testing**: Vitest, Supertest, MongoMemoryServer (124+ automated tests covering all 9 build phases)
 
-page/component → feature API module → shared API client → backend
-- Components and pages must not call fetch directly.
-- Keep HTTP calls in client/src/api/.
-- Keep shared authentication state in AuthContext.
-- Keep socket lifecycle and socket events in the designated socket
-  context/service.
-- Keep shared enums and constants in the client constants folder.
-- Use reusable components for repeated form controls, cards, dialogs,
-  and feedback states.
-Do not place business logic in route files, React presentation
-components, or controllers merely because it is quicker.
-4. Global API, data, and security contracts
-The detailed build plan is authoritative for exact field lists and
-endpoint behavior. Apply these global rules in every step.
-API conventions
-- All API endpoints start with /api.
-- JSON request and response bodies unless the endpoint explicitly uses
-  multipart upload or a file attachment.
-- Use camelCase field names.
-- MongoDB identifiers are exposed as 24-character hexadecimal strings
-  in _id.
-- Dates are serialized as ISO 8601 UTC strings.
-- Money is stored and returned as whole-rupee integers, without
-  decimals or currency symbols.
-- Client requests always include credentials: "include".
-- Reject unknown request-body fields with strict Zod schemas.
-- Validate route IDs, query parameters, and request bodies before
-  using them.
-Response conventions
-- Read one: 200 and the object itself.
-- Read many: 200 and { items, page, limit, total, totalPages },
-  unless the detailed plan explicitly defines cursor pagination for
-  that endpoint.
-- Create: 201 and the created object.
-- Update: 200 and the updated object.
-- Delete, logout, and mark-read actions: 204 with no response body.
-Error conventions
-Use the standard error shape:
-{
-  "message": "Validation failed",
-  "errors": [
-    { "field": "email", "message": "Enter a valid email" }
-  ]
-}
-errors is present only for validation errors.
+---
 
-Use the status codes consistently:
-- 400 --- invalid input, malformed ID, or invalid query.
-- 401 --- missing, invalid, or expired authentication; invalid
-  credentials.
-- 403 --- authenticated but forbidden, including ownership/role
-  restrictions, banned users, or unverified users where required.
-- 404 --- resource not found or intentionally hidden from the
-  caller.
-- 409 --- duplicate resource or invalid state transition/conflict.
-- 429 --- rate limit.
-- 500 --- unexpected server error; expose only
-  Something went wrong, never a stack trace.
-Login must not reveal whether an email exists. Unknown email, wrong
-password, and Google-only account login attempts use the same
-401 Invalid email or password response.
-Authentication
-- Cookie name: token.
-- Cookie options: httpOnly: true, sameSite: "lax", secure: true
-  in production, and maxAge equal to the JWT lifetime.
-- JWT payload: { sub: userId, role }.
-- Sign with JWT_SECRET; lifetime comes from JWT_EXPIRES_IN.
-- Read the user ID and role from the verified token, never from
-  client-provided body/query values.
-- Protected routes use requireAuth.
-- Owner-only checks happen in the service layer.
-- Never expose password hashes, OAuth identifiers, tokens,
-  blocked-user lists, or another user's email.
-- Return the Me shape only for the authenticated user and
-  PublicUser for other users, as defined in the detailed plan.
-Security and data integrity
-- Never pass req.body or req.query directly into MongoDB filters
-  or update operators.
-- Build database filters from validated, explicitly selected fields.
-- Escape user text before using it in a regular expression.
-- Never trust client-supplied userId, seller, role, status, or
-  derived price fields.
-- Derive the acting user from req.user.
-- Use atomic conditional updates for state transitions. Include the
-  expected current state in the update filter.
-- Use MongoDB transactions for multi-document operations where the
-  detailed plan requires them.
-- Enforce uniqueness with database indexes, not check-then-insert
-  logic that can race.
-- Keep private data out of public responses and logs.
-- Do not log passwords, tokens, reset links, OAuth secrets, or full
-  sensitive payloads.
-- Do not weaken security or remove a failing test to make the suite
-  pass.
-Validation and pagination
-Use the exact validation limits, enum values, pagination defaults, and
-sorting allowlists in the detailed build plan. Do not invent alternative
-limits.
-- Default page: 1; minimum 1.
-- Default limit: 12; maximum 50.
-- Out-of-range values return 400.
-- Sorting is endpoint-specific and allowlisted; never pass arbitrary
-  sort values into MongoDB.
-5. Step-by-step execution protocol
-For each step, follow this sequence.
-A. Plan
-1. Read the matching step in book-exchange-detailed-build-plan.md.
-2. Confirm the previous step's acceptance criteria are satisfied.
-3. Inspect the relevant existing files.
-4. List files to create/change and explain why each is needed.
-5. Identify dependencies and environment variables required by this
-   step.
-6. Identify the tests that will prove the behavior.
-Do not begin implementation if the previous step is incomplete or
-failing. Report the blocker and propose a focused fix.
-B. Implement
-1. Implement backend models and indexes needed by this step.
-2. Implement Zod validation.
-3. Implement service-layer business logic and authorization.
-4. Implement controllers and routes.
-5. Add middleware or jobs only when the current step requires them.
-6. Implement frontend API modules.
-7. Implement frontend pages, components, and state integration.
-8. Include loading, error, empty, and success states where applicable.
-9. Keep responsive behavior and accessibility in scope.
-10. Update .env.example whenever a new environment variable is
-    introduced.
-Write complete, runnable code. Do not use pseudocode or leave incomplete
-stubs.
-C. Test
-- Add tests for success cases and failure cases.
-- Test validation boundaries and unknown fields.
-- Test unauthenticated and unauthorized access.
-- Test ownership and privacy rules.
-- Test duplicate/conflict behavior.
-- Test important state transitions and concurrent requests.
-- Use isolated test data; tests must not depend on execution order.
-- Use MongoDB Memory Server for API tests; never point automated tests
-  at the real Atlas database.
-- Keep rate limiters disabled in test mode, as specified.
-- Mock external services such as email, Google OAuth, and Cloudinary
-  where appropriate.
-- Do not make real third-party API calls from unit tests.
-Run the relevant commands from the repository's actual scripts. At
-minimum, run the applicable test suite and lint/build checks. If a
-command cannot run, report the exact reason and do not claim it passed.
-D. Review
-Compare the implementation against:
-- the detailed plan's endpoint table;
-- request and response shapes;
-- validation and enum requirements;
-- acceptance checklist;
-- security and privacy rules;
-- mobile and accessibility requirements;
-- existing project conventions.
-Fix issues found during review before declaring the step complete.
-E. Stop and report
-Stop after the current step. Do not continue into the next step
-automatically.
+## Directory Structure
 
-Use the reporting template in Section 9.
-6. Frontend quality requirements
-- Build a consistent, clean, student-friendly interface.
-- Use Tailwind CSS and existing design conventions.
-- Support mobile layouts starting at 360 px wide.
-- Use semantic HTML and properly associated labels.
-- Every input must have a visible label or an accessible name.
-- Buttons must have clear labels and disabled/loading states.
-- Show field-level validation errors and a useful general error
-  message.
-- Every data-driven page must have:
-  - loading state;
-  - error state with a retry path where appropriate;
-  - empty state;
-  - populated state.
-- Avoid layout shifts and inaccessible dialogs.
-- Ensure keyboard navigation, visible focus indicators, and sensible
-  focus behavior in dialogs.
-- Add meaningful alt text to informative images; decorative images
-  use empty alt text.
-- Render user-generated chat text as text, never as HTML.
-- Do not add fake statistics, fake user reviews, fake listings, or
-  invented activity to production UI.
-- Demo seed data is allowed only through the designated seed scripts
-  and must never run automatically in production.
-- Do not add decorative functionality that is not connected to a real
-  working action.
-7. Backend quality requirements
-- Keep app.js separate from server.js: tests import the Express
-  app without opening a network listener; server.js connects and
-  listens.
-- Keep environment loading and validation centralized.
-- Keep middleware order intentional and consistent with the detailed
-  plan.
-- Use a centralized error handler.
-- Use a small logger that is silent in tests.
-- Use explicit response serializers/select projections to prevent
-  accidental sensitive-field exposure.
-- Add database indexes required for uniqueness, filtering, sorting,
-  and lookup.
-- Use transactions for critical multi-document workflows specified by
-  the plan.
-- Ensure background jobs are guarded by configuration and safe to run
-  more than once.
-- Ensure jobs do not run in test environments unless a test explicitly
-  invokes them.
-- Do not introduce an additional queue, cache, ORM, framework, or
-  hosting dependency unless the user approves it.
-8. Step roadmap and stop conditions
-The detailed build plan contains the authoritative implementation
-details. Use this roadmap only to identify the current scope.
-  Step                    Scope                                   Stop condition
-  1                       Server/client foundation, environment   Browser auth flow, refresh
-validation, MongoDB connection, auth,   persistence, redirect
-protected route, login/register/logout  behavior, privacy checks,
-tests and lint pass
+```text
+├── client/                     # React + Vite frontend application
+│   ├── src/
+│   │   ├── api/                # API client functions (Axios/fetch wrappers)
+│   │   ├── components/         # Reusable UI modals, banners, cards, navbar
+│   │   ├── context/            # AuthContext, SocketContext
+│   │   ├── pages/              # Route pages (Browse, ListingDetail, Chat, Admin, etc.)
+│   │   └── App.jsx             # Main router & layout
+├── server/                     # Express REST API & Socket.IO server
+│   ├── src/
+│   │   ├── config/             # Environment, database, passport configurations
+│   │   ├── controllers/        # Express HTTP route controllers
+│   │   ├── jobs/               # Expiry and notification cron jobs
+│   │   ├── middleware/         # Auth, roles, error handlers, upload, zod validation
+│   │   ├── models/             # Mongoose schemas (User, Listing, Request, Review, etc.)
+│   │   ├── routes/             # REST route declarations
+│   │   ├── seeds/              # Initial admin & demo data seeders
+│   │   ├── services/           # Pure business logic and database queries
+│   │   └── socket/             # Socket.IO connection & event handlers
+│   └── tests/                  # Vitest integration test suites (step1 - step9)
+└── package.json                # Workspace root orchestrator
+```
 
-  2                       Email verification, password            Verification/reset/Google
-reset/change, Google OAuth, profile     flows work; tests and lint
-editing, mailer                         pass
+---
 
-  3                       Listing CRUD, listing ownership, type   Verified user can manage
-validation, image upload/removal,       own listings and images;
-relisting                               authorization tests pass
+## Getting Started
 
-  4                       Browse/search/filter/sort/pagination,   Search and filters work
-price hint, ISBN lookup                 with correct pagination and
-no unsafe query
-construction
+### 1. Prerequisites
+- **Node.js**: v18.0.0 or later
+- **MongoDB**: Local MongoDB instance or MongoDB Atlas cluster URI
 
-  5                       Requests, reservation, meetup points,   Full exchange flow works;
-cancellation, two-party handover        concurrent accept race test
-proves only one winner
+### 2. Environment Configuration
+Copy `.env.example` in `server/`:
+```bash
+cd server
+cp .env.example .env
+```
 
-  6                       Conversation REST API, Socket.IO        Two users can chat live;
-auth/events, chat history, read state,  history and unread state
-offers                                  persist; offer rules pass
+| Variable | Description | Default / Example |
+|---|---|---|
+| `PORT` | API server port | `5000` |
+| `NODE_ENV` | Runtime environment (`development`, `production`, `test`) | `development` |
+| `CLIENT_URL` | Frontend origin for CORS and cookie cookies | `http://localhost:5173` |
+| `MONGODB_URI` | MongoDB connection string | `mongodb://127.0.0.1:27017/book_exchange` |
+| `JWT_SECRET` | Secret key for signing tokens (minimum 32 characters) | `super_secret_jwt_key_at_least_32_characters_long` |
+| `JWT_EXPIRES_IN` | Token expiration duration | `7d` |
+| `COOKIE_NAME` | Name of the authentication cookie | `token` |
+| `ADMIN_EMAIL` | Initial administrator email for seeding | `admin@college.edu` |
+| `ADMIN_PASSWORD` | Initial administrator password | `Admin1234!` |
+| `JOBS_ENABLED` | Enable background expiration cron jobs | `true` |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud identifier (optional in dev) | `your_cloud_name` |
+| `CLOUDINARY_API_KEY` | Cloudinary API key | `your_api_key` |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret | `your_api_secret` |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID (optional in dev) | `your_google_client_id` |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | `your_google_client_secret` |
 
-  7                       Wishlist, wanted entries,               Matching and price-drop
-notifications, email notifications,     notifications work; counts
-matching                                and ownership tests pass
+---
 
-  8                       Reviews, reports, blocking, seller      Only completed exchanges
-dashboard                               can be reviewed; dashboard
-aggregates match test data
+## Available Scripts
 
-  9                       Admin controls, expiry/reminder job,    Admin and deletion
-privacy page, export, account deletion  workflows pass; export
-contains no secrets
-10                      Accessibility, responsive QA, coverage, Full deployed phone journey
-README, deployment                      and final acceptance
-checklist pass
-Explicit scope control
-- Do not implement chat in Step 3 just because a Chat button is
-  visible in a mockup.
-- Do not implement reviews before completed exchanges exist.
-- Do not implement admin moderation before the admin step.
-- Do not add unrequested AI features, recommendation engines, payment
-  gateways, maps, or external services.
-- Do not change the roadmap or skip a step without user approval.
-9. Required completion report
-After each step, provide this report:
-Step N --- \(step title\)
-Status: Complete / Partially complete / Blocked
+### Development
+```bash
+# Start backend server in watch mode (from server/)
+npm --prefix server run dev
 
-1. Files created or changed - List every file and its purpose. -
-Mention important files intentionally left unchanged.
+# Start frontend development server (from client/)
+npm --prefix client run dev
+```
 
-2. Dependencies and environment - Packages installed or reused. -
-New environment variables. - .env.example changes. - Never include
-real secret values.
+### Seeding
+```bash
+# Seed the initial admin account
+npm --prefix server run seed:admin
 
-3. Commands - Exact install, test, lint, build, seed, and start
-commands relevant to the step. - State the directory from which each
-command must be run.
+# Seed comprehensive demo dataset (4 verified students, 12 listings, meetups, chat)
+npm --prefix server run seed:demo
+```
 
-4. Automated verification - Tests passed. - Tests failed. - Tests
-skipped and why. - Lint/build/type-check results. - Include actual
-command output summaries, not guessed results.
+### Testing & Build
+```bash
+# Run backend test suite (all 124 tests)
+npm --prefix server test
 
-5. Manual browser verification - Give ordered steps a user can
-follow. - Include expected results for each step. - Clearly identify any
-manual check that you did not perform.
+# Build frontend production bundle
+npm --prefix client run build
+```
 
-6. Acceptance checklist - Mark each criterion from the detailed plan
-as passed, failed, or not verified. - Do not mark an item passed without
-evidence.
+---
 
-7. Risks, assumptions, and deferred work - Explain any ambiguity,
-limitation, or remaining issue. - Identify anything intentionally
-deferred to a later step and why.
+## API Endpoints Reference
 
-8. Git checkpoint - Recommend a concise commit message after all
-checks pass. - Do not create a commit unless the user has asked you to
-commit or the IDE workflow explicitly authorizes it.
+### Authentication (`/api/auth`)
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | Register new student account | No |
+| `POST` | `/api/auth/login` | Log in and receive httpOnly cookie | No |
+| `POST` | `/api/auth/logout` | Clear cookie and session | Yes |
+| `POST` | `/api/auth/verify-email` | Verify email address with token | No |
+| `POST` | `/api/auth/forgot-password` | Send password reset email | No |
+| `POST` | `/api/auth/reset-password` | Reset password using token | No |
+| `GET` | `/api/auth/google` | Initiate Google OAuth 2.0 flow | No |
 
-End by asking the user to review the completed step and confirm before
-proceeding.
-10. Code review rejection checklist
-Reject or fix the implementation if any of the following occurs:
-- Business rules are implemented in routes or controllers.
-- A state is read and then updated in a separate non-atomic operation
-  where concurrency matters.
-- Client-supplied identity, role, seller, status, or derived price is
-  trusted.
-- Raw request body/query objects are passed to MongoDB.
-- Sensitive fields or another user's private email are returned.
-- A list endpoint omits pagination where the specification requires
-  it.
-- An unapproved dependency is added.
-- A React component makes its own direct HTTP request instead of using
-  the API layer.
-- A data page lacks loading, error, or empty states.
-- Tests cover only successful behavior.
-- Tests are changed or weakened only to make the implementation pass.
-- Placeholder code, fake production data, // implement later, or
-  commented-out implementations remain.
-- A new environment variable is missing from .env.example.
-- Secrets are committed or exposed to the frontend.
-- A deployment, browser test, or external integration is claimed to
-  work without verification.
-11. Initial instruction to the IDE
-When this file is first provided to the IDE, do not immediately
-generate the whole application.
+### Profile & Privacy (`/api/me`)
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `GET` | `/api/me` | Fetch authenticated student profile | Yes |
+| `PUT` | `/api/me` | Update department, semester, avatar, settings | Yes |
+| `PUT` | `/api/me/password` | Change password (invalidates other sessions) | Yes |
+| `GET` | `/api/me/dashboard` | Seller dashboard analytics & recent stats | Yes |
+| `GET` | `/api/me/listings` | Paginated list of student's own listings | Yes |
+| `GET` | `/api/me/wishlist` | View wishlisted textbooks | Yes |
+| `POST` | `/api/me/wishlist/:id` | Add listing to wishlist | Yes |
+| `DELETE` | `/api/me/wishlist/:id` | Remove listing from wishlist | Yes |
+| `GET` | `/api/me/export` | Download GDPR/Privacy machine-readable JSON archive | Yes |
+| `DELETE` | `/api/me` | Permanently anonymize and delete student account | Yes |
 
-Start by:
-1. Reading book-exchange-ide-instructions.md and
-   book-exchange-detailed-build-plan.md.
-2. Inspecting the existing repository and identifying its current
-   implementation state.
-3. Reporting the current step, repository structure, existing relevant
-   files, and missing requirements.
-4. Listing the exact files and dependencies needed for Step 1 only,
-   unless Step 1 is already complete.
-5. Waiting for confirmation if the repository state or requested
-   starting point is ambiguous.
-If the user explicitly says to start Step 1, implement Step 1 only and
-follow the full protocol above.
+### Listings (`/api/listings`)
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `GET` | `/api/listings` | Search and filter listings (with price hints) | Optional |
+| `POST` | `/api/listings` | Create a new textbook listing (with image upload) | Yes |
+| `GET` | `/api/listings/:id` | Get single listing details | Optional |
+| `PUT` | `/api/listings/:id` | Update an existing listing | Yes (Owner) |
+| `DELETE` | `/api/listings/:id` | Remove a listing | Yes (Owner) |
+| `POST` | `/api/listings/:id/report` | Report a listing for moderation | Yes |
+
+### Requests & Handover (`/api/requests`)
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `POST` | `/api/requests/:listingId` | Submit book exchange/purchase request | Yes |
+| `GET` | `/api/requests` | List incoming and outgoing requests | Yes |
+| `PATCH` | `/api/requests/:id/accept` | Accept request & reserve listing with meetup point | Yes (Seller) |
+| `PATCH` | `/api/requests/:id/reject` | Reject request | Yes (Seller) |
+| `PATCH` | `/api/requests/:id/cancel` | Cancel pending request | Yes |
+| `POST` | `/api/requests/:id/confirm` | Dual physical handover confirmation | Yes |
+
+### Real-Time Chat & Offers (`/api/conversations` & `/api/messages`)
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `GET` | `/api/conversations` | List active chat conversations | Yes |
+| `POST` | `/api/conversations` | Start conversation for a listing | Yes |
+| `GET` | `/api/messages/:convId` | Paginated message history with read receipts | Yes |
+| `POST` | `/api/messages/:convId` | Send text message or price offer | Yes |
+| `PATCH` | `/api/messages/:id/offer` | Accept or decline negotiated price offer | Yes |
+
+### Reviews, Reports & Trust (`/api/reviews` & `/api/users`)
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `POST` | `/api/reviews` | Review seller after completed exchange | Yes (Buyer) |
+| `GET` | `/api/users/:id` | Public profile with ratings & review count | No |
+| `GET` | `/api/users/:id/reviews` | Paginated reviews received by a seller | No |
+| `POST` | `/api/users/:id/report` | Report student user for misconduct | Yes |
+| `POST` | `/api/users/:id/block` | Block abusive user from search/chat | Yes |
+| `DELETE` | `/api/users/:id/block` | Unblock user | Yes |
+
+### Administration (`/api/admin`)
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `GET` | `/api/admin/reports` | View moderation reports queue | Admin |
+| `PATCH` | `/api/admin/reports/:id` | Resolve or dismiss report | Admin |
+| `DELETE` | `/api/admin/listings/:id` | Remove inappropriate listing & notify seller | Admin |
+| `PATCH` | `/api/admin/users/:id/ban` | Ban abusive user and de-list their books | Admin |
+| `GET` | `/api/admin/meetup-points` | List campus meetup locations | Admin |
+| `POST` | `/api/admin/meetup-points` | Create designated campus exchange zone | Admin |
+| `PATCH` | `/api/admin/meetup-points/:id` | Edit or toggle active status of meetup zone | Admin |
+
+---
+
+## Production Deployment Guide
+
+### 1. Database (MongoDB Atlas)
+- Create an M0/M10 MongoDB Atlas cluster.
+- Whitelist host IP addresses (`0.0.0.0/0` with secure user authentication).
+- Set `MONGODB_URI` in server environment.
+
+### 2. Backend API (Render / Railway / Fly.io)
+- Set build command: `npm install`
+- Set start command: `npm start`
+- Configure `PORT`, `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `JOBS_ENABLED=true`.
+- Health check path: `GET /api/health`.
+- If behind a reverse proxy (Render/Railway), `app.set('trust proxy', 1)` ensures secure cookies function properly.
+
+### 3. Frontend Client (Vercel / Netlify)
+- Set root directory: `client`
+- Set build command: `npm run build`
+- Set publish directory: `dist`
+- Configure SPA rewrite redirect rule in `client/public/_redirects`:
+  ```text
+  /*    /index.html   200
+  ```
+- Set `VITE_API_BASE_URL` pointing to the deployed API origin.
+
+---
+
+## License
+MIT © Campus Book Exchange

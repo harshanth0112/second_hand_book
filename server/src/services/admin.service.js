@@ -144,3 +144,4 @@ export class AdminService {
     return await MeetupPoint.find().sort({ createdAt: -1 }).lean();
   }
 }
+

@@ -48,3 +48,4 @@ if (process.argv[1]?.endsWith('admin.js')) {
       process.exit(1);
     });
 }
+

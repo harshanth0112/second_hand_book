@@ -32,3 +32,4 @@ export const deleteAccountSchema = z.object({
   confirm: z.string(),
   password: z.string().optional(),
 });
+

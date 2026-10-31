@@ -18,6 +18,9 @@ import { MyListings } from './pages/MyListings';
 import { ListingDetail } from './pages/ListingDetail';
 import { Requests } from './pages/Requests';
 import { Chat } from './pages/Chat';
+import { Wishlist } from './pages/Wishlist';
+import { Wanted } from './pages/Wanted';
+import { Notifications } from './pages/Notifications';
 
 export function App() {
   return (
@@ -56,6 +59,30 @@ export function App() {
                   element={
                     <ProtectedRoute>
                       <Requests />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/wishlist"
+                  element={
+                    <ProtectedRoute>
+                      <Wishlist />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/wanted"
+                  element={
+                    <ProtectedRoute>
+                      <Wanted />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/notifications"
+                  element={
+                    <ProtectedRoute>
+                      <Notifications />
                     </ProtectedRoute>
                   }
                 />

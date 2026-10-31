@@ -1,9 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Heart } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { addToWishlist, removeFromWishlist } from '../api/wanted';
 
-export function BookCard({ listing }) {
+export function BookCard({ listing, isWishlisted: initialWishlisted, onWishlistChange }) {
+  const { user } = useAuth();
+  const [isWishlisted, setIsWishlisted] = useState(
+    Boolean(initialWishlisted || user?.wishlist?.includes?.(listing._id))
+  );
+  const [loading, setLoading] = useState(false);
+
   const thumbnail = listing.images && listing.images.length > 0 ? listing.images[0] : listing.coverUrl;
+
+  const handleToggleWishlist = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) return;
+    try {
+      setLoading(true);
+      if (isWishlisted) {
+        await removeFromWishlist(listing._id);
+        setIsWishlisted(false);
+        if (onWishlistChange) onWishlistChange(listing._id, false);
+      } else {
+        await addToWishlist(listing._id);
+        setIsWishlisted(true);
+        if (onWishlistChange) onWishlistChange(listing._id, true);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getTypeBadge = () => {
     if (listing.listingType === 'free') {
@@ -32,7 +62,22 @@ export function BookCard({ listing }) {
             <BookOpen className="w-12 h-12 text-gray-300" />
           )}
 
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-2 right-2 flex items-center gap-1.5">
+            {user && (
+              <button
+                type="button"
+                onClick={handleToggleWishlist}
+                disabled={loading}
+                className="p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-700 hover:text-red-500 shadow-sm transition"
+                title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+              >
+                <Heart
+                  className={`w-3.5 h-3.5 ${
+                    isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600'
+                  }`}
+                />
+              </button>
+            )}
             <span className="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider rounded bg-black/60 text-white backdrop-blur-xs">
               {listing.condition}
             </span>

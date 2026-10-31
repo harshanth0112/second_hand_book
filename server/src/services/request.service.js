@@ -3,6 +3,7 @@ import { Request } from '../models/Request.js';
 import { Listing } from '../models/Listing.js';
 import { MeetupPoint } from '../models/MeetupPoint.js';
 import { Conversation } from '../models/Conversation.js';
+import { notify } from './notification.service.js';
 
 export class RequestService {
   static async createRequest(listingId, buyerId, { message = '', offeredBook = '' }) {
@@ -63,6 +64,13 @@ export class RequestService {
       offeredBook,
       agreedPrice,
     });
+
+    notify(
+      listing.seller,
+      'request_received',
+      `You received a new exchange/purchase request for "${listing.title}".`,
+      `/requests`
+    ).catch(err => console.error('[Notify request_received Error]:', err.message));
 
     return request;
   }
@@ -166,6 +174,13 @@ export class RequestService {
       }
     );
 
+    notify(
+      request.buyer,
+      'request_accepted',
+      `Your request for "${updatedListing.title}" was accepted! Meetup is set.`,
+      `/requests`
+    ).catch(err => console.error('[Notify request_accepted Error]:', err.message));
+
     return request;
   }
 
@@ -191,6 +206,14 @@ export class RequestService {
 
     request.status = 'rejected';
     await request.save();
+
+    notify(
+      request.buyer,
+      'request_rejected',
+      `Your request for the book was declined by the seller.`,
+      `/requests`
+    ).catch(err => console.error('[Notify request_rejected Error]:', err.message));
+
     return request;
   }
 
@@ -219,6 +242,14 @@ export class RequestService {
       }
       request.status = 'cancelled';
       await request.save();
+
+      notify(
+        request.seller,
+        'request_cancelled',
+        `A pending request for your book was cancelled by the buyer.`,
+        `/requests`
+      ).catch(err => console.error('[Notify request_cancelled Error]:', err.message));
+
       return request;
     }
 
@@ -235,6 +266,14 @@ export class RequestService {
           handoverConfirmedBy: [],
         },
       });
+
+      const recipient = isBuyer ? request.seller : request.buyer;
+      notify(
+        recipient,
+        'request_cancelled',
+        `The accepted meetup/request for the book was cancelled.`,
+        `/requests`
+      ).catch(err => console.error('[Notify request_cancelled Error]:', err.message));
 
       return request;
     }
@@ -297,6 +336,14 @@ export class RequestService {
 
     request.status = 'completed';
     await request.save();
+
+    const otherParty = isBuyer ? request.seller : request.buyer;
+    notify(
+      otherParty,
+      'handover_confirmed',
+      `Handover confirmed for "${listing.title}". Transaction is now complete!`,
+      `/requests`
+    ).catch(err => console.error('[Notify handover_confirmed Error]:', err.message));
 
     return { request, listing, completed: true };
   }

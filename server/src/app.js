@@ -11,6 +11,8 @@ import requestRoutes from './routes/requests.routes.js';
 import meetupPointRoutes from './routes/meetupPoints.routes.js';
 import conversationRoutes from './routes/conversations.routes.js';
 import messageRoutes from './routes/messages.routes.js';
+import notificationRoutes from './routes/notifications.routes.js';
+import wantedRoutes from './routes/wanted.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export const createApp = () => {
@@ -39,6 +41,8 @@ export const createApp = () => {
   app.use('/api/meetup-points', meetupPointRoutes);
   app.use('/api/conversations', conversationRoutes);
   app.use('/api/messages', messageRoutes);
+  app.use('/api/notifications', notificationRoutes);
+  app.use('/api/wanted', wantedRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

@@ -79,6 +79,11 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    wishlist: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'Listing',
+      default: [],
+    },
     // Authentication providers
     authProviders: {
       type: [String],

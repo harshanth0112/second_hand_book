@@ -1,5 +1,6 @@
 import { Listing } from '../models/Listing.js';
 import { ImageService } from './image.service.js';
+import { matchWanted, notifyPriceDrop } from './notification.service.js';
 
 export class ListingService {
   static normalizeTitle(title) {
@@ -18,6 +19,16 @@ export class ListingService {
       titleNormalized,
       expiresAt,
     });
+
+    // Fire wanted matching asynchronously without blocking response
+    matchWanted({
+      _id: listing._id,
+      title: listing.title,
+      subject: listing.subject,
+      department: listing.department,
+      price: listing.price,
+      owner: userId
+    }).catch(err => console.error('[Listing matchWanted Error]:', err.message));
 
     return listing;
   }
@@ -42,10 +53,23 @@ export class ListingService {
       throw error;
     }
 
+    const oldPrice = listing.price;
     const titleNormalized = ListingService.normalizeTitle(data.title);
 
     Object.assign(listing, data, { titleNormalized });
     await listing.save();
+
+    if (data.price !== undefined && data.price < oldPrice) {
+      notifyPriceDrop(
+        {
+          _id: listing._id,
+          title: listing.title,
+          owner: listing.seller
+        },
+        oldPrice,
+        data.price
+      ).catch(err => console.error('[Listing notifyPriceDrop Error]:', err.message));
+    }
 
     return listing;
   }

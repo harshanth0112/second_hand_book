@@ -2,8 +2,9 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { BookOpen, LogOut, User as UserIcon, Settings, MessageSquare } from 'lucide-react';
+import { BookOpen, LogOut, User as UserIcon, Settings, MessageSquare, Heart } from 'lucide-react';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
+import { NotificationBell } from './NotificationBell';
 
 export const Navbar = () => {
   const { user, logout } = useAuth();
@@ -49,6 +50,22 @@ export const Navbar = () => {
                 </Link>
 
                 <Link
+                  to="/wishlist"
+                  className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-red-500 transition"
+                  title="My Wishlist"
+                >
+                  <Heart className="w-4 h-4" />
+                  <span className="hidden sm:inline">Wishlist</span>
+                </Link>
+
+                <Link
+                  to="/wanted"
+                  className="text-sm font-medium text-gray-700 hover:text-blue-600 transition"
+                >
+                  Wanted
+                </Link>
+
+                <Link
                   to="/chat"
                   className="relative flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-blue-600 transition"
                 >
@@ -60,6 +77,8 @@ export const Navbar = () => {
                     </span>
                   )}
                 </Link>
+
+                <NotificationBell />
 
                 <Link
                   to="/dashboard"

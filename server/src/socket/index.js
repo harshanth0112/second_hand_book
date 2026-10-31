@@ -7,6 +7,12 @@ import { Message } from '../models/Message.js';
 import { Listing } from '../models/Listing.js';
 import { env } from '../config/env.js';
 
+let ioInstance = null;
+
+export function getIO() {
+  return ioInstance;
+}
+
 export function setupSocketServer(httpServer) {
   const io = new Server(httpServer, {
     cors: {
@@ -14,6 +20,8 @@ export function setupSocketServer(httpServer) {
       credentials: true,
     },
   });
+
+  ioInstance = io;
 
   // Socket authentication middleware via token cookie
   io.use(async (socket, next) => {
@@ -55,6 +63,7 @@ export function setupSocketServer(httpServer) {
 
   io.on('connection', (socket) => {
     const user = socket.user;
+    socket.join(`user:${user._id.toString()}`);
     const rateLimitMap = {
       count: 0,
       windowStart: Date.now(),

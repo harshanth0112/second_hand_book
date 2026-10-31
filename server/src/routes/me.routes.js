@@ -1,10 +1,16 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
 import { ListingController } from '../controllers/listing.controller.js';
+import {
+  addToWishlist,
+  removeFromWishlist,
+  getWishlist
+} from '../controllers/notification.controller.js';
 import { validateBody, validateQuery } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { changePasswordSchema, updateProfileSchema } from '../validators/auth.validator.js';
 import { myListingsQuerySchema } from '../validators/listing.validator.js';
+import { wishlistQuerySchema } from '../validators/notification.validator.js';
 
 const router = Router();
 
@@ -22,6 +28,11 @@ router.put('/password', validateBody(changePasswordSchema), AuthController.chang
 
 // GET /api/me/listings — user's listings
 router.get('/listings', validateQuery(myListingsQuerySchema), ListingController.getMyListings);
+
+// Wishlist routes
+router.get('/wishlist', validateQuery(wishlistQuerySchema), getWishlist);
+router.post('/wishlist/:listingId', addToWishlist);
+router.delete('/wishlist/:listingId', removeFromWishlist);
 
 export default router;
 

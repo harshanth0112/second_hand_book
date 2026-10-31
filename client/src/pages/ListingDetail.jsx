@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { getListing } from '../api/listings';
 import { createBookRequest } from '../api/requests';
 import { startConversation } from '../api/chat';
+import { addToWishlist, removeFromWishlist } from '../api/wanted';
 import { RequestModal } from '../components/RequestModal';
 import { useNavigate } from 'react-router-dom';
-import { Eye, Calendar, BookOpen, AlertCircle, ArrowLeft, Tag, Layers, GraduationCap, CheckCircle } from 'lucide-react';
+import { Eye, Calendar, BookOpen, AlertCircle, ArrowLeft, Tag, Layers, GraduationCap, CheckCircle, Heart } from 'lucide-react';
 
 export function ListingDetail() {
   const { id } = useParams();
@@ -17,6 +18,8 @@ export function ListingDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   // Request modal state
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -28,7 +31,12 @@ export function ListingDetail() {
     async function loadData() {
       try {
         const data = await getListing(id);
-        if (isMounted) setListing(data);
+        if (isMounted) {
+          setListing(data);
+          if (user?.wishlist?.includes?.(data._id)) {
+            setIsWishlisted(true);
+          }
+        }
       } catch (err) {
         if (isMounted) setError(err.message || 'Listing not found');
       } finally {
@@ -272,6 +280,36 @@ export function ListingDetail() {
                     >
                       Chat with Seller
                     </button>
+
+                    {user && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            setWishlistLoading(true);
+                            if (isWishlisted) {
+                              await removeFromWishlist(listing._id);
+                              setIsWishlisted(false);
+                            } else {
+                              await addToWishlist(listing._id);
+                              setIsWishlisted(true);
+                            }
+                          } catch {
+                            // ignore
+                          } finally {
+                            setWishlistLoading(false);
+                          }
+                        }}
+                        disabled={wishlistLoading}
+                        className="px-3 py-2.5 border border-gray-300 hover:border-red-300 text-gray-700 hover:text-red-500 rounded-lg transition flex items-center justify-center"
+                        title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                      >
+                        <Heart
+                          className={`w-4 h-4 ${
+                            isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600'
+                          }`}
+                        />
+                      </button>
+                    )}
                   </>
                 )}
               </div>

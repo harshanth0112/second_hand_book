@@ -1,19 +1,19 @@
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import { beforeAll, afterAll, beforeEach } from 'vitest';
 
-let mongoServer;
+let mongoReplSet;
 
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
+  mongoReplSet = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+  const uri = mongoReplSet.getUri();
   await mongoose.connect(uri);
 });
 
 afterAll(async () => {
   await mongoose.disconnect();
-  if (mongoServer) {
-    await mongoServer.stop();
+  if (mongoReplSet) {
+    await mongoReplSet.stop();
   }
 });
 

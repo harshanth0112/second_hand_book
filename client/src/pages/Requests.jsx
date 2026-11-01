@@ -53,8 +53,10 @@ export function Requests() {
     try {
       await patchRequestAction(requestId, payload);
       await loadRequests();
+      return true;
     } catch (err) {
       alert(err.message || 'Action failed');
+      return false;
     } finally {
       setSubmittingAction(false);
     }
@@ -155,8 +157,8 @@ export function Requests() {
         <div className="space-y-4">
           {requests.map((item) => {
             const counterparty = activeTab === 'received' ? item.buyer : item.seller;
-            const isSeller = user._id === item.seller?._id;
-            const isBuyer = user._id === item.buyer?._id;
+            const isSeller = user?._id === item.seller?._id;
+            const isBuyer = user?._id === item.buyer?._id;
 
             return (
               <div
@@ -336,4 +338,3 @@ export function Requests() {
     </div>
   );
 }
-

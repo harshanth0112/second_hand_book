@@ -5,7 +5,7 @@
  * Requires mongodb-memory-server (devDependencies).
  */
 import http from 'http';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import { createApp } from './src/app.js';
 import { connectDB } from './src/config/db.js';
@@ -17,8 +17,8 @@ import { seedDemoData } from './src/seeds/demo.js';
 
 const startStandaloneServer = async () => {
   logger.info('[Standalone] Starting in-memory MongoDB instance...');
-  const mongod = await MongoMemoryServer.create();
-  const uri = mongod.getUri();
+  const mongoReplSet = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+  const uri = mongoReplSet.getUri();
   logger.info(`[Standalone] In-memory MongoDB running at: ${uri}`);
 
   // Connect to the in-memory database
@@ -60,7 +60,7 @@ const startStandaloneServer = async () => {
       }
       try {
         await mongoose.disconnect();
-        await mongod.stop();
+        await mongoReplSet.stop();
         logger.info('[Standalone] Cleanup complete. Exiting.');
         process.exit(0);
       } catch (cleanupErr) {
@@ -84,4 +84,3 @@ startStandaloneServer().catch((err) => {
   logger.error('Failed to start standalone server:', err);
   process.exit(1);
 });
-

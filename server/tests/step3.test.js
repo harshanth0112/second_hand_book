@@ -433,6 +433,31 @@ describe('Step 3: Listing Management', () => {
       expect(removeRes.status).toBe(200);
       expect(removeRes.body.images.length).toBe(0);
     });
+
+    it('rejects image changes when a listing is reserved', async () => {
+      const { cookie } = await createVerifiedUser();
+
+      const createRes = await request(app)
+        .post('/api/listings')
+        .set('Cookie', cookie)
+        .send(SAMPLE_SELL_BOOK);
+
+      await Listing.findByIdAndUpdate(createRes.body._id, {
+        status: 'reserved',
+        images: ['https://res.cloudinary.com/test/image/upload/v1/mock.jpg'],
+      });
+
+      const uploadRes = await request(app)
+        .post(`/api/listings/${createRes.body._id}/images`)
+        .set('Cookie', cookie)
+        .attach('images', Buffer.from('fake-image-bytes'), 'test.jpg');
+      const removeRes = await request(app)
+        .delete(`/api/listings/${createRes.body._id}/images/0`)
+        .set('Cookie', cookie);
+
+      expect(uploadRes.status).toBe(409);
+      expect(removeRes.status).toBe(409);
+    });
   });
 
   describe('Relist Functionality', () => {
@@ -451,15 +476,18 @@ describe('Step 3: Listing Management', () => {
       expect(earlyRelist.status).toBe(409);
 
       // 2. Mark as expired -> Relist succeeds
-      await Listing.findByIdAndUpdate(createRes.body._id, { status: 'expired' });
+      await Listing.findByIdAndUpdate(createRes.body._id, {
+        status: 'expired',
+        reminderSentAt: new Date(),
+      });
       const relistRes = await request(app)
         .post(`/api/listings/${createRes.body._id}/relist`)
         .set('Cookie', cookie);
 
       expect(relistRes.status).toBe(200);
       expect(relistRes.body.status).toBe('available');
+      expect(relistRes.body.reminderSentAt).toBeNull();
       expect(new Date(relistRes.body.expiresAt).getTime()).toBeGreaterThan(Date.now() + 50 * 24 * 60 * 60 * 1000);
     });
   });
 });
-

@@ -116,92 +116,98 @@ export class RequestService {
   }
 
   static async acceptRequest(requestId, sellerId, { meetupPointId, meetupTime }) {
-    const request = await Request.findById(requestId);
-    if (!request) {
-      const err = new Error('Request not found');
-      err.status = 404;
-      throw err;
+    const session = await mongoose.startSession();
+    let updatedListing;
+    let acceptedRequest;
+
+    try {
+      acceptedRequest = await session.withTransaction(async () => {
+        const request = await Request.findById(requestId).session(session);
+        if (!request) {
+          const err = new Error('Request not found');
+          err.status = 404;
+          throw err;
+        }
+
+        if (!request.seller.equals(sellerId)) {
+          const err = new Error('Only the seller can accept this request');
+          err.status = 403;
+          throw err;
+        }
+
+        if (request.status !== 'pending') {
+          const err = new Error('Request is no longer pending');
+          err.status = 409;
+          throw err;
+        }
+
+        const meetupPoint = await MeetupPoint.findById(meetupPointId).session(session);
+        if (!meetupPoint || !meetupPoint.active) {
+          const err = new Error('Invalid or inactive meetup point');
+          err.status = 400;
+          throw err;
+        }
+
+        const time = new Date(meetupTime);
+        const now = Date.now();
+        const maxFuture = now + 14 * 24 * 60 * 60 * 1000;
+        if (Number.isNaN(time.getTime()) || time.getTime() <= now || time.getTime() > maxFuture) {
+          const err = new Error('meetupTime must be in the future and within 14 days');
+          err.status = 400;
+          throw err;
+        }
+
+        updatedListing = await Listing.findOneAndUpdate(
+          {
+            _id: request.listing,
+            seller: sellerId,
+            status: 'available',
+          },
+          {
+            $set: {
+              status: 'reserved',
+              reservedFor: request.buyer,
+              handoverConfirmedBy: [],
+            },
+          },
+          { new: true, session }
+        );
+
+        if (!updatedListing) {
+          const err = new Error('Listing is no longer available');
+          err.status = 409;
+          throw err;
+        }
+
+        request.status = 'accepted';
+        request.meetupPoint = meetupPointId;
+        request.meetupTime = time;
+        await request.save({ session });
+
+        await Request.updateMany(
+          {
+            listing: request.listing,
+            _id: { $ne: request._id },
+            status: 'pending',
+          },
+          { $set: { status: 'rejected' } },
+          { session }
+        );
+
+        return request;
+      });
+    } finally {
+      await session.endSession();
     }
-
-    if (!request.seller.equals(sellerId)) {
-      const err = new Error('Only the seller can accept this request');
-      err.status = 403;
-      throw err;
-    }
-
-    if (request.status !== 'pending') {
-      const err = new Error('Request is no longer pending');
-      err.status = 409;
-      throw err;
-    }
-
-    // Meetup point validation
-    const meetupPoint = await MeetupPoint.findById(meetupPointId);
-    if (!meetupPoint || !meetupPoint.active) {
-      const err = new Error('Invalid or inactive meetup point');
-      err.status = 400;
-      throw err;
-    }
-
-    // Meetup time validation: future and within 14 days
-    const time = new Date(meetupTime);
-    const now = Date.now();
-    const maxFuture = now + 14 * 24 * 60 * 60 * 1000;
-    if (isNaN(time.getTime()) || time.getTime() <= now || time.getTime() > maxFuture) {
-      const err = new Error('meetupTime must be in the future and within 14 days');
-      err.status = 400;
-      throw err;
-    }
-
-    // Atomic update to reserve listing: ensures only one buyer gets the reservation
-    const updatedListing = await Listing.findOneAndUpdate(
-      {
-        _id: request.listing,
-        seller: sellerId,
-        status: 'available',
-      },
-      {
-        $set: {
-          status: 'reserved',
-          reservedFor: request.buyer,
-          handoverConfirmedBy: [],
-        },
-      },
-      { new: true }
-    );
-
-    if (!updatedListing) {
-      const err = new Error('Listing is no longer available');
-      err.status = 409;
-      throw err;
-    }
-
-    // Update the request to accepted
-    request.status = 'accepted';
-    request.meetupPoint = meetupPointId;
-    request.meetupTime = time;
-    await request.save();
-
-    // Reject all other pending requests on this listing
-    await Request.updateMany(
-      {
-        listing: request.listing,
-        _id: { $ne: request._id },
-        status: 'pending',
-      },
-      {
-        $set: { status: 'rejected' },
-      }
-    );
 
     notify(
-      request.buyer,
+      acceptedRequest.buyer,
       'request_accepted',
       `Your request for "${updatedListing.title}" was accepted! Meetup is set.`,
       `/requests`
     ).catch(err => console.error('[Notify request_accepted Error]:', err.message));
 
-    return request;
+    return acceptedRequest;
   }
 
   static async rejectRequest(requestId, sellerId) {
@@ -275,17 +281,53 @@ export class RequestService {
 
     if (request.status === 'accepted') {
       // Either seller or buyer can cancel an accepted request
-      request.status = 'cancelled';
-      await request.save();
+      const session = await mongoose.startSession();
+      let cancelledRequest;
 
-      // Return listing to available and clear reservedFor & handover flags
-      await Listing.findByIdAndUpdate(request.listing, {
-        $set: {
-          status: 'available',
-          reservedFor: null,
-          handoverConfirmedBy: [],
-        },
-      });
+      try {
+        cancelledRequest = await session.withTransaction(async () => {
+          const currentRequest = await Request.findById(requestId).session(session);
+          if (!currentRequest) {
+            const err = new Error('Request not found');
+            err.status = 404;
+            throw err;
+          }
+
+          if (currentRequest.status !== 'accepted') {
+            const err = new Error(`Cannot cancel request in "${currentRequest.status}" status`);
+            err.status = 409;
+            throw err;
+          }
+
+          const updatedListing = await Listing.findOneAndUpdate(
+            {
+              _id: currentRequest.listing,
+              status: 'reserved',
+              reservedFor: currentRequest.buyer,
+            },
+            {
+              $set: {
+                status: 'available',
+                reservedFor: null,
+                handoverConfirmedBy: [],
+              },
+            },
+            { new: true, session }
+          );
+
+          if (!updatedListing) {
+            const err = new Error('The reserved listing could not be restored');
+            err.status = 409;
+            throw err;
+          }
+
+          currentRequest.status = 'cancelled';
+          await currentRequest.save({ session });
+          return currentRequest;
+        });
+      } finally {
+        await session.endSession();
+      }
 
       const recipient = isBuyer ? request.seller : request.buyer;
       notify(
@@ -295,7 +337,7 @@ export class RequestService {
         `/requests`
       ).catch(err => console.error('[Notify request_cancelled Error]:', err.message));
 
-      return request;
+      return cancelledRequest;
     }
 
     const err = new Error(`Cannot cancel request in "${request.status}" status`);
@@ -304,68 +346,98 @@ export class RequestService {
   }
 
   static async confirmHandover(requestId, userId) {
-    const request = await Request.findById(requestId);
-    if (!request) {
-      const err = new Error('Request not found');
-      err.status = 404;
-      throw err;
+    const session = await mongoose.startSession();
+    let result;
+
+    try {
+      result = await session.withTransaction(async () => {
+        const request = await Request.findById(requestId).session(session);
+        if (!request) {
+          const err = new Error('Request not found');
+          err.status = 404;
+          throw err;
+        }
+
+        const isBuyer = request.buyer.equals(userId);
+        const isSeller = request.seller.equals(userId);
+        if (!isBuyer && !isSeller) {
+          const err = new Error('Only request participants can confirm handover');
+          err.status = 403;
+          throw err;
+        }
+
+        if (request.status !== 'accepted') {
+          const err = new Error('Handover can only be confirmed on accepted requests');
+          err.status = 409;
+          throw err;
+        }
+
+        const listing = await Listing.findOne({
+          _id: request.listing,
+          status: 'reserved',
+        }).session(session);
+
+        if (!listing || !listing.reservedFor?.equals(request.buyer)) {
+          const err = new Error('Listing is not reserved for this request');
+          err.status = 409;
+          throw err;
+        }
+
+        if (listing.handoverConfirmedBy.some((id) => id.equals(userId))) {
+          const err = new Error('You have already confirmed this handover');
+          err.status = 409;
+          throw err;
+        }
+
+        const updatedListing = await Listing.findOneAndUpdate(
+          {
+            _id: listing._id,
+            status: 'reserved',
+            reservedFor: request.buyer,
+            handoverConfirmedBy: { $ne: userId },
+          },
+          { $addToSet: { handoverConfirmedBy: userId } },
+          { new: true, session }
+        );
+
+        if (!updatedListing) {
+          const err = new Error('Handover confirmation could not be recorded');
+          err.status = 409;
+          throw err;
+        }
+
+        const bothConfirmed = updatedListing.handoverConfirmedBy.some((id) => id.equals(request.buyer))
+          && updatedListing.handoverConfirmedBy.some((id) => id.equals(request.seller));
+
+        if (!bothConfirmed) {
+          return { request, listing: updatedListing, completed: false };
+        }
+
+        updatedListing.status = 'sold';
+        updatedListing.buyer = request.buyer;
+        updatedListing.soldAt = new Date();
+        await updatedListing.save({ session });
+
+        request.status = 'completed';
+        await request.save({ session });
+
+        return { request, listing: updatedListing, completed: true, isBuyer };
+      });
+    } finally {
+      await session.endSession();
     }
 
-    const isBuyer = request.buyer.equals(userId);
-    const isSeller = request.seller.equals(userId);
+    if (!result.completed) return result;
 
-    if (!isBuyer && !isSeller) {
-      const err = new Error('Only request participants can confirm handover');
-      err.status = 403;
-      throw err;
-    }
-
-    if (request.status !== 'accepted') {
-      const err = new Error('Handover can only be confirmed on accepted requests');
-      err.status = 409;
-      throw err;
-    }
-
-    const listing = await Listing.findById(request.listing);
-    if (!listing || listing.status !== 'reserved') {
-      const err = new Error('Listing is not in reserved status');
-      err.status = 409;
-      throw err;
-    }
-
-    const alreadyConfirmed = listing.handoverConfirmedBy.some((id) => id.equals(userId));
-    if (alreadyConfirmed) {
-      const err = new Error('You have already confirmed this handover');
-      err.status = 409;
-      throw err;
-    }
-
-    if (listing.handoverConfirmedBy.length === 0) {
-      // First confirmation: push user into handoverConfirmedBy array
-      listing.handoverConfirmedBy.push(userId);
-      await listing.save();
-      return { request, listing, completed: false };
-    }
-
-    // Second confirmation: finalizes the handover
-    listing.handoverConfirmedBy.push(userId);
-    listing.status = 'sold';
-    listing.buyer = request.buyer;
-    listing.soldAt = new Date();
-    await listing.save();
-
-    request.status = 'completed';
-    await request.save();
-
-    const otherParty = isBuyer ? request.seller : request.buyer;
+    const otherParty = result.isBuyer ? result.request.seller : result.request.buyer;
     notify(
       otherParty,
       'handover_confirmed',
-      `Handover confirmed for "${listing.title}". Transaction is now complete!`,
+      `Handover confirmed for "${result.listing.title}". Transaction is now complete!`,
       `/requests`
     ).catch(err => console.error('[Notify handover_confirmed Error]:', err.message));
 
-    return { request, listing, completed: true };
+    return result;
   }
 
   static async getSentRequests(buyerId, { page = 1, limit = 12, status }) {
@@ -422,4 +494,3 @@ export class RequestService {
     };
   }
 }
-

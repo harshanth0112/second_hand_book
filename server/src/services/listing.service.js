@@ -127,6 +127,12 @@ export class ListingService {
       throw error;
     }
 
+    if (listing.status !== 'available') {
+      const error = new Error('Images can only be modified on available listings');
+      error.status = 409;
+      throw error;
+    }
+
     if (!files || files.length === 0) {
       const error = new Error('No images provided');
       error.status = 400;
@@ -162,6 +168,12 @@ export class ListingService {
     if (!listing.seller.equals(userId)) {
       const error = new Error('Not authorized to modify this listing');
       error.status = 403;
+      throw error;
+    }
+
+    if (listing.status !== 'available') {
+      const error = new Error('Images can only be modified on available listings');
+      error.status = 409;
       throw error;
     }
 
@@ -204,6 +216,7 @@ export class ListingService {
 
     listing.status = 'available';
     listing.expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+    listing.reminderSentAt = null;
     await listing.save();
 
     return listing;
@@ -410,4 +423,3 @@ export class ListingService {
     };
   }
 }
-

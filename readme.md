@@ -62,7 +62,7 @@ cp .env.example .env
 | `PORT` | API server port | `5000` |
 | `NODE_ENV` | Runtime environment (`development`, `production`, `test`) | `development` |
 | `CLIENT_URL` | Frontend origin for CORS and cookie cookies | `http://localhost:5173` |
-| `MONGODB_URI` | MongoDB connection string | `mongodb://127.0.0.1:27017/book_exchange` |
+| `MONGODB_URI` | MongoDB replica-set connection string (transactions are required for request consistency) | `mongodb://127.0.0.1:27017/book_exchange?replicaSet=rs0` |
 | `JWT_SECRET` | Secret key for signing tokens (minimum 32 characters) | `super_secret_jwt_key_at_least_32_characters_long` |
 | `JWT_EXPIRES_IN` | Token expiration duration | `7d` |
 | `COOKIE_NAME` | Name of the authentication cookie | `token` |
@@ -191,6 +191,7 @@ npm --prefix client run build
 
 ### 1. Database (MongoDB Atlas)
 - Create an M0/M10 MongoDB Atlas cluster.
+- Request consistency uses MongoDB transactions, so use a replica-set deployment (Atlas clusters support this).
 - Whitelist host IP addresses (`0.0.0.0/0` with secure user authentication).
 - Set `MONGODB_URI` in server environment.
 

@@ -310,6 +310,61 @@ describe('Step 5: Requests, Reservation, Meetups and Handover', () => {
   });
 
   describe('Confirm Handover (PATCH /api/requests/:id action: confirmHandover)', () => {
+    it('serializes simultaneous confirmations and completes the handover once', async () => {
+      const { user: seller, cookie: sellerCookie } = await createVerifiedUser();
+      const { user: buyer, cookie: buyerCookie } = await createVerifiedUser();
+
+      const listing = await Listing.create({
+        title: 'Concurrent Handover Book',
+        titleNormalized: 'concurrent handover book',
+        author: 'Author',
+        department: 'Civil',
+        listingType: 'sell',
+        condition: 'good',
+        price: 350,
+        seller: seller._id,
+        status: 'available',
+        expiresAt: new Date(Date.now() + 100000),
+      });
+
+      const req = await request(app)
+        .post(`/api/listings/${listing._id}/requests`)
+        .set('Cookie', buyerCookie)
+        .send({ message: 'Ready' });
+
+      await request(app)
+        .patch(`/api/requests/${req.body._id}`)
+        .set('Cookie', sellerCookie)
+        .send({
+          action: 'accept',
+          meetupPointId: activeMeetupPoint._id.toString(),
+          meetupTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        });
+
+      const [sellerConfirmation, buyerConfirmation] = await Promise.all([
+        request(app)
+          .patch(`/api/requests/${req.body._id}`)
+          .set('Cookie', sellerCookie)
+          .send({ action: 'confirmHandover' }),
+        request(app)
+          .patch(`/api/requests/${req.body._id}`)
+          .set('Cookie', buyerCookie)
+          .send({ action: 'confirmHandover' }),
+      ]);
+
+      expect(sellerConfirmation.status).toBe(200);
+      expect(buyerConfirmation.status).toBe(200);
+      expect([sellerConfirmation.body.completed, buyerConfirmation.body.completed]).toContain(true);
+
+      const [savedListing, savedRequest] = await Promise.all([
+        Listing.findById(listing._id),
+        Request.findById(req.body._id),
+      ]);
+      expect(savedListing.status).toBe('sold');
+      expect(savedListing.handoverConfirmedBy).toHaveLength(2);
+      expect(savedRequest.status).toBe('completed');
+    });
+
     it('two confirmations required to complete request and mark listing as sold', async () => {
       const { user: seller, cookie: sellerCookie } = await createVerifiedUser();
       const { user: buyer, cookie: buyerCookie } = await createVerifiedUser();
@@ -428,4 +483,3 @@ describe('Step 5: Requests, Reservation, Meetups and Handover', () => {
     });
   });
 });
-

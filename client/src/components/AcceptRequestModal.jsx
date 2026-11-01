@@ -3,25 +3,43 @@ import { X, Check, ShieldCheck, MapPin, Calendar } from 'lucide-react';
 import { getMeetupPoints } from '../api/requests';
 
 export function AcceptRequestModal({ request, isOpen, onClose, onAccept, accepting = false }) {
-  if (!isOpen || !request) return null;
-
   const [points, setPoints] = useState([]);
   const [selectedPointId, setSelectedPointId] = useState('');
   const [meetupTime, setMeetupTime] = useState('');
   const [error, setError] = useState('');
+  const [loadingPoints, setLoadingPoints] = useState(false);
 
   useEffect(() => {
+    if (!isOpen || !request) return undefined;
+
+    let cancelled = false;
+
+    setPoints([]);
+    setSelectedPointId('');
+    setError('');
+    setLoadingPoints(true);
+
     async function loadPoints() {
       try {
         const data = await getMeetupPoints();
-        setPoints(data || []);
-        if (data && data.length > 0) {
-          setSelectedPointId(data[0]._id);
+        if (cancelled) return;
+
+        const availablePoints = Array.isArray(data) ? data : [];
+        setPoints(availablePoints);
+        setSelectedPointId(availablePoints[0]?._id || '');
+
+        if (availablePoints.length === 0) {
+          setError('No active campus meetup points are available.');
         }
       } catch (err) {
-        setError('Failed to load meetup points');
+        if (!cancelled) {
+          setError(err.message || 'Failed to load meetup points');
+        }
+      } finally {
+        if (!cancelled) setLoadingPoints(false);
       }
     }
+
     loadPoints();
 
     // Default meetup time: tomorrow at 2:00 PM
@@ -32,30 +50,45 @@ export function AcceptRequestModal({ request, isOpen, onClose, onAccept, accepti
       .toISOString()
       .slice(0, 16);
     setMeetupTime(localIso);
-  }, [isOpen]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, request]);
+
+  if (!isOpen || !request) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     if (!selectedPointId) {
-      setError('Please choose a campus meetup point');
+      setError('Please choose a campus meetup point.');
       return;
     }
 
     const chosenDate = new Date(meetupTime);
-    if (isNaN(chosenDate.getTime()) || chosenDate.getTime() <= Date.now()) {
-      setError('Meetup time must be in the future');
+    const maxFuture = Date.now() + 14 * 24 * 60 * 60 * 1000;
+    if (
+      Number.isNaN(chosenDate.getTime()) ||
+      chosenDate.getTime() <= Date.now() ||
+      chosenDate.getTime() > maxFuture
+    ) {
+      setError('Choose a future date within the next 14 days.');
       return;
     }
 
     try {
-      await onAccept(request._id, {
+      const success = await onAccept(request._id, {
         action: 'accept',
         meetupPointId: selectedPointId,
         meetupTime: chosenDate.toISOString(),
       });
-      onClose();
+      if (success) {
+        onClose();
+      } else {
+        setError('Failed to accept request. Please try again.');
+      }
     } catch (err) {
       setError(err.message || 'Failed to accept request');
     }
@@ -95,8 +128,15 @@ export function AcceptRequestModal({ request, isOpen, onClose, onAccept, accepti
             <select
               value={selectedPointId}
               onChange={(e) => setSelectedPointId(e.target.value)}
+              disabled={loadingPoints || points.length === 0}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
             >
+              {points.length === 0 && (
+                <option value="">
+                  {loadingPoints ? 'Loading meetup points...' : 'No meetup points available'}
+                </option>
+              )}
               {points.map((p) => (
                 <option key={p._id} value={p._id}>
                   {p.name} ({p.area})
@@ -137,7 +177,7 @@ export function AcceptRequestModal({ request, isOpen, onClose, onAccept, accepti
             </button>
             <button
               type="submit"
-              disabled={accepting}
+              disabled={accepting || loadingPoints || points.length === 0 || !selectedPointId}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50"
             >
               <Check className="w-3.5 h-3.5" />
@@ -149,4 +189,3 @@ export function AcceptRequestModal({ request, isOpen, onClose, onAccept, accepti
     </div>
   );
 }
-

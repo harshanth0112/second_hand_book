@@ -228,6 +228,20 @@ export class AuthService {
     }
 
     await user.save();
+
+    // Security alert: send password change notification email
+    sendMail({
+      to: user.email,
+      subject: 'Security Alert: Password Changed',
+      text: `Hello ${user.name},\n\nYour CampusBooks account password was changed on ${new Date().toUTCString()}.\n\nIf you did not make this change, please contact support or reset your password immediately.\n`,
+      templateId: env.RESEND_TEMPLATE_PASSWORD_CHANGED,
+      variables: {
+        name: user.name || 'Student',
+        changed_at: new Date().toUTCString(),
+        support_url: `${env.CLIENT_URL}/privacy`,
+      },
+    }).catch((err) => console.error('[Password Reset Alert Mail Error]:', err.message));
+
     return user;
   }
 
@@ -270,6 +284,20 @@ export class AuthService {
     // Issue a new token with the updated sessionVersion so the current
     // session remains valid immediately after the change.
     const token = signToken(user);
+
+    // Security alert: send password change notification email
+    sendMail({
+      to: user.email,
+      subject: 'Security Alert: Password Changed',
+      text: `Hello ${user.name},\n\nYour CampusBooks account password was changed on ${new Date().toUTCString()}.\n\nIf you did not make this change, please contact support or reset your password immediately.\n`,
+      templateId: env.RESEND_TEMPLATE_PASSWORD_CHANGED,
+      variables: {
+        name: user.name || 'Student',
+        changed_at: new Date().toUTCString(),
+        support_url: `${env.CLIENT_URL}/privacy`,
+      },
+    }).catch((err) => console.error('[Password Change Alert Mail Error]:', err.message));
+
     return { user, token };
   }
 

@@ -5,6 +5,7 @@ import { MeetupPoint } from '../models/MeetupPoint.js';
 import { Conversation } from '../models/Conversation.js';
 import { User } from '../models/User.js';
 import { notify } from './notification.service.js';
+import { env } from '../config/env.js';
 
 export class RequestService {
   static async createRequest(listingId, buyerId, { message = '', offeredBook = '' }) {
@@ -85,7 +86,17 @@ export class RequestService {
       listing.seller,
       'request_received',
       `You received a new exchange/purchase request for "${listing.title}".`,
-      `/requests`
+      `/requests`,
+      {
+        templateId: env.RESEND_TEMPLATE_BOOK_ENQUIRY,
+        subject: `New enquiry for "${listing.title}"`,
+        variables: {
+          buyer_name: buyer?.name || 'A student',
+          book_title: listing.title,
+          enquiry_details: message || 'Interested in your book listing.',
+          enquiry_url: `${env.CLIENT_URL}/requests`,
+        },
+      }
     ).catch(err => console.error('[Notify request_received Error]:', err.message));
 
     return request;

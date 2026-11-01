@@ -5,6 +5,7 @@ import { User } from '../models/User.js';
 import { Conversation } from '../models/Conversation.js';
 import { Message } from '../models/Message.js';
 import { Listing } from '../models/Listing.js';
+import { notify } from '../services/notification.service.js';
 import { env } from '../config/env.js';
 
 let ioInstance = null;
@@ -188,6 +189,48 @@ export function setupSocketServer(httpServer) {
 
         // Broadcast to the conversation room
         io.to(`conversation:${conversationId}`).emit('message:new', createdMessage);
+
+        // Send email notification to the recipient asynchronously
+        const recipientId = isBuyer ? conv.seller : conv.buyer;
+        const conversationUrl = `${env.CLIENT_URL}/chat/${conversationId}`;
+
+        if (type === 'offer') {
+          // Notify seller of new book offer
+          const listing = await Listing.findById(conv.listing).select('title').lean();
+          notify(
+            recipientId,
+            'offer_received',
+            `${user.name} made an offer of ₹${messageData.offerAmount} on "${listing?.title || 'your book'}".`,
+            `/chat/${conversationId}`,
+            {
+              templateId: env.RESEND_TEMPLATE_BOOK_OFFER,
+              subject: `New book offer of ₹${messageData.offerAmount} on "${listing?.title || 'your book'}"`,
+              variables: {
+                buyer_name: user.name || 'A buyer',
+                book_title: listing?.title || 'Textbook',
+                offered_price: `₹${messageData.offerAmount}`,
+                conversation_url: conversationUrl,
+              },
+            }
+          ).catch((e) => console.error('[Offer Notify Error]:', e.message));
+        } else {
+          // Standard text message notification
+          notify(
+            recipientId,
+            'message_received',
+            `New message from ${user.name}: "${messageData.text.length > 50 ? messageData.text.substring(0, 47) + '...' : messageData.text}"`,
+            `/chat/${conversationId}`,
+            {
+              templateId: env.RESEND_TEMPLATE_NEW_MESSAGE,
+              subject: `New message from ${user.name}`,
+              variables: {
+                sender_name: user.name || 'Someone',
+                message_preview: messageData.text.length > 100 ? messageData.text.substring(0, 97) + '...' : messageData.text,
+                conversation_url: conversationUrl,
+              },
+            }
+          ).catch((e) => console.error('[Message Notify Error]:', e.message));
+        }
 
         if (ack) ack({ ok: true, message: createdMessage });
       } catch (err) {

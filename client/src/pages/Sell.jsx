@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ListingForm } from '../components/ListingForm';
-import { createListing } from '../api/listings';
+import { ImageUploader } from '../components/ImageUploader';
+import { createListing, uploadListingImages } from '../api/listings';
 import { AlertCircle } from 'lucide-react';
 
 export function Sell() {
@@ -10,12 +11,24 @@ export function Sell() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState([]);
 
   const handleSubmit = async (formData) => {
     setError('');
     setIsSubmitting(true);
     try {
       const created = await createListing(formData);
+
+      // If user selected photos, upload them right after listing creation
+      if (selectedPhotos.length > 0) {
+        try {
+          await uploadListingImages(created._id, selectedPhotos);
+        } catch (uploadErr) {
+          console.error('Failed to upload photos for listing:', uploadErr);
+          // Still proceed to listing page even if photo upload failed
+        }
+      }
+
       navigate(`/listings/${created._id}`);
     } catch (err) {
       setError(err.message || 'Failed to create listing');
@@ -55,6 +68,15 @@ export function Sell() {
           <span>{error}</span>
         </div>
       )}
+
+      {/* Book Photos Uploader */}
+      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
+        <ImageUploader
+          existingImages={[]}
+          onFilesSelected={setSelectedPhotos}
+          uploading={isSubmitting}
+        />
+      </div>
 
       <ListingForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
     </div>

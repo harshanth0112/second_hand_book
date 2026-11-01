@@ -5,7 +5,13 @@ const MAX_FILES = 4;
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-export function ImageUploader({ existingImages = [], onUpload, onRemoveExisting, uploading = false }) {
+export function ImageUploader({
+  existingImages = [],
+  onUpload,
+  onRemoveExisting,
+  uploading = false,
+  onFilesSelected,
+}) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [error, setError] = useState('');
@@ -38,16 +44,24 @@ export function ImageUploader({ existingImages = [], onUpload, onRemoveExisting,
       newPreviews.push(URL.createObjectURL(file));
     }
 
-    setSelectedFiles((prev) => [...prev, ...validFiles]);
+    const updatedFiles = [...selectedFiles, ...validFiles];
+    setSelectedFiles(updatedFiles);
     setPreviews((prev) => [...prev, ...newPreviews]);
+    if (onFilesSelected) {
+      onFilesSelected(updatedFiles);
+    }
   };
 
   const removeSelected = (idx) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+    const updatedFiles = selectedFiles.filter((_, i) => i !== idx);
+    setSelectedFiles(updatedFiles);
     setPreviews((prev) => {
       URL.revokeObjectURL(prev[idx]);
       return prev.filter((_, i) => i !== idx);
     });
+    if (onFilesSelected) {
+      onFilesSelected(updatedFiles);
+    }
   };
 
   const handleUploadClick = async () => {

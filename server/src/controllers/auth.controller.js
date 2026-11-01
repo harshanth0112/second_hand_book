@@ -279,11 +279,41 @@ export class AuthController {
     try {
       const allowed = ['name', 'department', 'semester', 'avatar', 'emailNotifications'];
       const user = req.user;
+      const oldEmail = user.email;
 
       for (const field of allowed) {
         if (req.body[field] !== undefined) {
           user[field] = req.body[field];
         }
+      }
+
+      // If email is being changed
+      if (req.body.email && req.body.email.toLowerCase() !== oldEmail.toLowerCase()) {
+        const newEmail = req.body.email.toLowerCase();
+        const existing = await (await import('../models/User.js')).User.findOne({ email: newEmail });
+        if (existing && !existing._id.equals(user._id)) {
+          return res.status(409).json({ message: 'Email address is already in use' });
+        }
+
+        user.email = newEmail;
+        user.emailVerified = false;
+        user.isVerified = false;
+
+        // Security alert: Notify previous email address
+        const { sendMail } = await import('../utils/mailer.js');
+        sendMail({
+          to: oldEmail,
+          subject: 'Security Alert: Email Address Changed',
+          text: `Hello ${user.name},\n\nThe email address for your CampusBooks account was changed to ${newEmail} on ${new Date().toUTCString()}.\n\nIf you did not make this change, please contact support immediately.\n`,
+          templateId: env.RESEND_TEMPLATE_EMAIL_CHANGED,
+          variables: {
+            name: user.name || 'Student',
+            old_email: oldEmail,
+            new_email: newEmail,
+            changed_at: new Date().toUTCString(),
+            support_url: `${env.CLIENT_URL}/privacy`,
+          },
+        }).catch((err) => console.error('[Email Changed Alert Error]:', err.message));
       }
 
       await user.save();

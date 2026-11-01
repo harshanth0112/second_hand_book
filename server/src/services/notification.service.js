@@ -4,8 +4,9 @@ import { User } from '../models/User.js';
 import { Listing } from '../models/Listing.js';
 import { sendMail } from '../utils/mailer.js';
 import { getIO } from '../socket/index.js';
+import { env } from '../config/env.js';
 
-export async function notify(userId, type, message, link) {
+export async function notify(userId, type, message, link, emailOptions = {}) {
   try {
     const notification = await Notification.create({
       user: userId,
@@ -14,15 +15,30 @@ export async function notify(userId, type, message, link) {
       link
     });
 
-    // Check user email notification preference
+    // Check user email notification preference (unless critical/security which overrides preference)
     const user = await User.findById(userId).select('email emailNotifications name').lean();
-    if (user && user.emailNotifications) {
-      // Fire-and-forget email dispatch
-      sendMail({
+    const shouldSendEmail = user && (emailOptions.isSecurityAlert || user.emailNotifications);
+
+    if (shouldSendEmail) {
+      const portalUrl = link ? (link.startsWith('http') ? link : `${env.CLIENT_URL}${link.startsWith('/') ? '' : '/'}${link}`) : env.CLIENT_URL;
+
+      let mailPayload = {
         to: user.email,
-        subject: `[Campus Book Exchange] ${message}`,
-        text: `Hi ${user.name},\n\n${message}\n\nView details: ${link || 'Visit the portal'}\n\nThanks,\nCampus Book Exchange Team`
-      }).catch((err) => {
+        subject: emailOptions.subject || `[Campus Book Exchange] ${message}`,
+        text: emailOptions.text || `Hi ${user.name},\n\n${message}\n\nView details: ${portalUrl}\n\nThanks,\nCampus Book Exchange Team`,
+      };
+
+      if (emailOptions.templateId) {
+        mailPayload.templateId = emailOptions.templateId;
+        mailPayload.variables = {
+          name: user.name || 'Student',
+          message: message,
+          link: portalUrl,
+          ...emailOptions.variables,
+        };
+      }
+
+      sendMail(mailPayload).catch((err) => {
         console.error('[Notification Mail Error]:', err.message);
       });
     }

@@ -95,6 +95,12 @@ export const updateProfileSchema = z
       .max(8, 'Semester must be between 1 and 8')
       .optional()
       .nullable(),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email('Please enter a valid email address')
+      .optional(),
     avatar: z.string().trim().optional(),
     emailNotifications: z.boolean().optional(),
   })

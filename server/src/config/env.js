@@ -11,12 +11,13 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   COOKIE_NAME: z.string().default('token'),
-  // Email configuration (optional; falls back to console logging if host is empty)
-  EMAIL_HOST: z.string().optional().default(''),
-  EMAIL_PORT: z.string().optional().default('587').transform((val) => parseInt(val, 10)),
-  EMAIL_USER: z.string().optional().default(''),
-  EMAIL_PASS: z.string().optional().default(''),
-  EMAIL_FROM: z.string().optional().default('noreply@bookexchange.campus'),
+  // Email configuration
+RESEND_API_KEY: z.string().optional().default(''),
+EMAIL_FROM: z.string().optional().default('onboarding@resend.dev'),
+EMAIL_HOST: z.string().optional().default(''),
+EMAIL_PORT: z.string().optional().default('587').transform((val) => parseInt(val, 10)),
+EMAIL_USER: z.string().optional().default(''),
+EMAIL_PASS: z.string().optional().default(''),
   // Google OAuth configuration (optional in dev/test)
   GOOGLE_CLIENT_ID: z.string().optional().default(''),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(''),

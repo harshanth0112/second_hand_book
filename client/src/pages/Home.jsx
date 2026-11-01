@@ -21,10 +21,17 @@ export function Home() {
   const abortControllerRef = useRef(null);
 
   // Sync state from URL
+  const rawDept = searchParams.get('department');
+  const rawSem = searchParams.get('semester');
+
   const filters = {
     q: localQuery,
-    department: searchParams.get('department') || (user?.department && !searchParams.toString() ? user.department : ''),
-    semester: searchParams.get('semester') || (user?.semester && !searchParams.toString() ? String(user.semester) : ''),
+    department: rawDept === 'all'
+      ? ''
+      : (rawDept || (user?.department && !searchParams.toString() ? user.department : '')),
+    semester: rawSem === 'all'
+      ? ''
+      : (rawSem || (user?.semester && !searchParams.toString() ? String(user.semester) : '')),
     condition: searchParams.get('condition') || '',
     listingType: searchParams.get('listingType') || '',
     minPrice: searchParams.get('minPrice') || '',
@@ -41,6 +48,26 @@ export function Home() {
 
     const nextParams = new URLSearchParams();
     for (const [k, v] of Object.entries(updated)) {
+      if (k === 'department') {
+        // If the user selected "All Departments" (empty string), explicitly save department=all
+        // so it overrides the user profile default and doesn't get re-applied.
+        if (v === '' || v === 'all') {
+          nextParams.set('department', 'all');
+        } else {
+          nextParams.set('department', v);
+        }
+        continue;
+      }
+
+      if (k === 'semester') {
+        if (v === '' || v === 'all') {
+          nextParams.set('semester', 'all');
+        } else {
+          nextParams.set('semester', v);
+        }
+        continue;
+      }
+
       if (v !== '' && v !== null && v !== undefined) {
         if (k === 'page' && v === 1) continue; // omit default page 1
         if (k === 'sort' && v === 'newest') continue; // omit default sort

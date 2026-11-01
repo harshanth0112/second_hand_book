@@ -191,6 +191,7 @@ export class AuthService {
 
     await sendMail({
       to: user.email,
+      subject: 'Reset your CampusBooks password',
       templateId: env.RESEND_TEMPLATE_PASSWORD_RESET || 'password-reset',
       variables: {
         USER_NAME: user.name || 'there',

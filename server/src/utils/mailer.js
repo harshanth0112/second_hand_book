@@ -89,9 +89,10 @@ export const sendMail = async ({ to, subject, text, html, templateId, variables 
         id: resolvedId,
         variables: variables || {},
       };
-      if (subject) payload.subject = subject;
+      // Provide default fallback subject in case template doesn't specify one
+      payload.subject = subject || 'CampusBooks Notification';
     } else {
-      payload.subject = subject;
+      payload.subject = subject || 'CampusBooks Notification';
       if (text) payload.text = text;
       if (html) payload.html = html;
     }

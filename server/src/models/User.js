@@ -153,6 +153,14 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    passwordResetPendingTokens: {
+      type: [{
+        _id: false,
+        tokenHash: { type: String, required: true },
+        expires: { type: Date, required: true },
+      }],
+      default: [],
+    },
   },
   {
     timestamps: true,

@@ -1,8 +1,9 @@
 import crypto from 'crypto';
 import { User } from '../models/User.js';
 import { signToken } from '../utils/jwt.js';
-import { sendMail } from '../utils/mailer.js';
+import { sendMail, sendNotificationEmail, sendPasswordResetEmail } from '../utils/mailer.js';
 import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,15 @@ const generateToken = () => {
  * Hash a raw token for database lookup.
  */
 const hashToken = (raw) => crypto.createHash('sha256').update(raw).digest('hex');
+
+const sendWelcomeEmail = (user) => sendMail({
+  to: user.email,
+  templateSlug: 'welcome',
+  data: {
+    name: user.name || 'Student',
+    product: 'CampusBooks',
+  },
+}).catch((err) => console.error('[AuthService] Welcome email failed:', err.message));
 
 // ── AuthService ───────────────────────────────────────────────────────────────
 
@@ -47,6 +57,8 @@ export class AuthService {
       authProviders: ['local'],
       sessionVersion: 0,
     });
+
+    sendWelcomeEmail(user);
 
     try {
       await AuthService.sendVerificationEmail(user);
@@ -110,8 +122,11 @@ export class AuthService {
 
     await sendMail({
       to: user.email,
-      subject: 'Verify your Book Exchange email address',
-      text: `Hello ${user.name},\n\nPlease verify your email address by clicking the link below:\n\n${verificationUrl}\n\nThis link expires in 24 hours.\n\nIf you did not create an account, please ignore this email.\n`,
+      templateSlug: 'verify-email',
+      data: {
+        name: user.name || 'Student',
+        link: verificationUrl,
+      },
     });
   }
 
@@ -173,32 +188,92 @@ export class AuthService {
   /**
    * Initiate a password reset flow. Always returns successfully to prevent
    * user enumeration — even if the email is not found.
+   *
+   * We intentionally do not use the built-in Sendliberty `password-reset`
+   * template because its rendered content is not verified to make the `code`
+   * variable a clickable link. Sendliberty supports raw HTML email bodies, so
+   * the reset message includes an explicit link.
    */
   static async forgotPassword(email) {
     const user = await User.findOne({ email });
 
-    // Always respond the same way regardless of whether the user exists
     if (!user) return;
 
     const { raw, hash } = generateToken();
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-    user.passwordResetTokenHash = hash;
-    user.passwordResetExpires = expires;
-    await user.save();
-
     const resetUrl = `${env.CLIENT_URL}/reset-password?token=${raw}`;
 
-    await sendMail({
-      to: user.email,
-      subject: 'Reset your CampusBooks password',
-      templateId: env.RESEND_TEMPLATE_PASSWORD_RESET || 'password-reset',
-      variables: {
-        USER_NAME: user.name || 'there',
-        RESET_URL: resetUrl,
-        EXPIRY_TIME: '1 hour',
-      },
-    });
+    try {
+      const result = await User.updateOne(
+        { _id: user._id },
+        { $push: { passwordResetPendingTokens: { tokenHash: hash, expires } } },
+      );
+      if (result.matchedCount === 0) return;
+    } catch {
+      logger.error({
+        event: 'password_reset_state_persist_failed',
+        purpose: 'password_reset',
+        stage: 'prepare',
+      });
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        link: resetUrl,
+      });
+    } catch (err) {
+      const category = err.statusCode === 429
+        ? 'rate_limited'
+        : err.statusCode
+          ? 'provider_rejected'
+          : 'network_or_configuration_failure';
+
+      logger.error({
+        event: 'email_delivery_failed',
+        provider: 'sendliberty',
+        purpose: 'password_reset',
+        category,
+        statusCode: err.statusCode,
+        retryAfter: err.retryAfter,
+      });
+
+      try {
+        await User.updateOne(
+          { _id: user._id },
+          { $pull: { passwordResetPendingTokens: { tokenHash: hash } } },
+        );
+      } catch {
+        logger.error({
+          event: 'password_reset_state_cleanup_failed',
+          purpose: 'password_reset',
+          stage: 'send_failure',
+        });
+      }
+      return;
+    }
+
+    try {
+      await User.updateOne(
+        { _id: user._id, 'passwordResetPendingTokens.tokenHash': hash },
+        {
+          $set: {
+            passwordResetTokenHash: hash,
+            passwordResetExpires: expires,
+          },
+          $pull: { passwordResetPendingTokens: { tokenHash: hash } },
+        },
+      );
+    } catch {
+      // The pending hash remains usable if promotion fails after delivery.
+      logger.error({
+        event: 'password_reset_state_persist_failed',
+        purpose: 'password_reset',
+        stage: 'promote',
+      });
+    }
   }
 
   /**
@@ -207,14 +282,23 @@ export class AuthService {
   static async resetPassword(rawToken, newPassword) {
     const hash = hashToken(rawToken);
 
-    const user = await User.findOne({ passwordResetTokenHash: hash });
+    const user = await User.findOne({
+      $or: [
+        { passwordResetTokenHash: hash },
+        { 'passwordResetPendingTokens.tokenHash': hash },
+      ],
+    });
     if (!user) {
       const err = new Error('Invalid or expired reset token');
       err.status = 400;
       throw err;
     }
 
-    if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+    const pendingToken = user.passwordResetPendingTokens.find(
+      (token) => token.tokenHash === hash,
+    );
+    const expires = pendingToken?.expires ?? user.passwordResetExpires;
+    if (!expires || expires < new Date()) {
       const err = new Error('Reset token has expired');
       err.status = 400;
       throw err;
@@ -226,6 +310,7 @@ export class AuthService {
     user.password = newPassword; // will be hashed by pre-save hook
     user.passwordResetTokenHash = null;
     user.passwordResetExpires = null;
+    user.passwordResetPendingTokens = [];
 
     // Ensure 'local' provider is registered (e.g. Google user setting a password)
     if (!user.authProviders.includes('local')) {
@@ -234,17 +319,13 @@ export class AuthService {
 
     await user.save();
 
-    // Security alert: send password change notification email
-    sendMail({
+    // Security alert: send password change notification email.
+    sendNotificationEmail({
       to: user.email,
-      subject: 'Security Alert: Password Changed',
-      text: `Hello ${user.name},\n\nYour CampusBooks account password was changed on ${new Date().toUTCString()}.\n\nIf you did not make this change, please contact support or reset your password immediately.\n`,
-      templateId: env.RESEND_TEMPLATE_PASSWORD_CHANGED,
-      variables: {
-        name: user.name || 'Student',
-        changed_at: new Date().toUTCString(),
-        support_url: `${env.CLIENT_URL}/privacy`,
-      },
+      name: user.name,
+      subject: 'Security Alert: Your CampusBooks Password Was Changed',
+      message: `Your CampusBooks account password was changed on ${new Date().toUTCString()}. If you did not make this change, reset your password or contact support.`,
+      link: `${env.CLIENT_URL}/forgot-password`,
     }).catch((err) => console.error('[Password Reset Alert Mail Error]:', err.message));
 
     return user;
@@ -284,23 +365,22 @@ export class AuthService {
     user.sessionVersion = (user.sessionVersion ?? 0) + 1;
     user.passwordChangedAt = new Date(); // audit timestamp
     user.password = newPassword; // will be hashed by pre-save hook
+    user.passwordResetTokenHash = null;
+    user.passwordResetExpires = null;
+    user.passwordResetPendingTokens = [];
     await user.save();
 
     // Issue a new token with the updated sessionVersion so the current
     // session remains valid immediately after the change.
     const token = signToken(user);
 
-    // Security alert: send password change notification email
-    sendMail({
+    // Security alert: send password change notification email.
+    sendNotificationEmail({
       to: user.email,
-      subject: 'Security Alert: Password Changed',
-      text: `Hello ${user.name},\n\nYour CampusBooks account password was changed on ${new Date().toUTCString()}.\n\nIf you did not make this change, please contact support or reset your password immediately.\n`,
-      templateId: env.RESEND_TEMPLATE_PASSWORD_CHANGED,
-      variables: {
-        name: user.name || 'Student',
-        changed_at: new Date().toUTCString(),
-        support_url: `${env.CLIENT_URL}/privacy`,
-      },
+      name: user.name,
+      subject: 'Security Alert: Your CampusBooks Password Was Changed',
+      message: `Your CampusBooks account password was changed on ${new Date().toUTCString()}. If you did not make this change, reset your password or contact support.`,
+      link: `${env.CLIENT_URL}/forgot-password`,
     }).catch((err) => console.error('[Password Change Alert Mail Error]:', err.message));
 
     return { user, token };
@@ -380,12 +460,10 @@ export class AuthService {
         user.avatar = avatar;
       }
 
-      // If user hasn't verified email on CampusBooks yet, send verification link
-      if (!user.emailVerified) {
-        await AuthService.sendVerificationEmail(user).catch((err) =>
-          console.error('[Google Link Verification Email Error]:', err.message)
-        );
-      }
+      user.emailVerified = true;
+      user.isVerified = true;
+      user.emailVerificationTokenHash = null;
+      user.emailVerificationExpires = null;
 
       await user.save();
       const token = signToken(user);
@@ -404,12 +482,16 @@ export class AuthService {
       sessionVersion: 0,
       avatar: avatar || '',
       role: 'student',
+      emailVerified,
+      isVerified: emailVerified,
     });
 
-    // Send verification link to user's Gmail address
-    await AuthService.sendVerificationEmail(user).catch((err) =>
-      console.error('[Google Signup Verification Email Error]:', err.message)
-    );
+    sendWelcomeEmail(user);
+    if (!emailVerified) {
+      await AuthService.sendVerificationEmail(user).catch((err) =>
+        console.error('[Google Signup Verification Email Error]:', err.message)
+      );
+    }
 
     const token = signToken(user);
     return { user, token };

@@ -95,7 +95,7 @@ export class AuthController {
       // Always returns 200 to prevent user enumeration
       await AuthService.forgotPassword(req.body.email);
       return res.status(200).json({
-        message: 'If that email is registered, a reset link has been sent',
+        message: 'If that email is registered, we will process your password-reset request',
       });
     } catch (error) {
       next(error);
@@ -305,19 +305,13 @@ export class AuthController {
         user.isVerified = false;
 
         // Security alert: Notify previous email address
-        const { sendMail } = await import('../utils/mailer.js');
-        sendMail({
+        const { sendNotificationEmail } = await import('../utils/mailer.js');
+        sendNotificationEmail({
           to: oldEmail,
+          name: user.name,
           subject: 'Security Alert: Email Address Changed',
-          text: `Hello ${user.name},\n\nThe email address for your CampusBooks account was changed to ${newEmail} on ${new Date().toUTCString()}.\n\nIf you did not make this change, please contact support immediately.\n`,
-          templateId: env.RESEND_TEMPLATE_EMAIL_CHANGED,
-          variables: {
-            name: user.name || 'Student',
-            old_email: oldEmail,
-            new_email: newEmail,
-            changed_at: new Date().toUTCString(),
-            support_url: `${env.CLIENT_URL}/privacy`,
-          },
+          message: `The email address for your CampusBooks account was changed to ${newEmail} on ${new Date().toUTCString()}. If you did not make this change, please contact support immediately.`,
+          link: `${env.CLIENT_URL}/privacy`,
         }).catch((err) => console.error('[Email Changed Alert Error]:', err.message));
       }
 

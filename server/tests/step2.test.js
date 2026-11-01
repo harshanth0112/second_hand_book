@@ -18,6 +18,7 @@ import { createApp } from '../src/app.js';
 import { User } from '../src/models/User.js';
 import { signToken } from '../src/utils/jwt.js';
 import { env } from '../src/config/env.js';
+import { logger } from '../src/utils/logger.js';
 
 const app = createApp();
 
@@ -160,6 +161,41 @@ describe('Session Versioning', () => {
 // ── Email Verification ────────────────────────────────────────────────────────
 
 describe('Email Verification', () => {
+  it('registration sends welcome and verification templates with secure verification storage', async () => {
+    const originalApiKey = env.SENDLIBERTY_API_KEY;
+    const startedAt = Date.now();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ messageId: 'mock-message-id' }),
+    });
+    env.SENDLIBERTY_API_KEY = 'test-api-key';
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      await registerUser();
+
+      const payloads = fetchMock.mock.calls.map(([, options]) => JSON.parse(options.body));
+      const welcome = payloads.find((payload) => payload.template === 'welcome');
+      const verification = payloads.find((payload) => payload.template === 'verify-email');
+
+      expect(welcome.data).toEqual({ name: TEST_USER.name, product: 'CampusBooks' });
+      expect(verification.data.name).toBe(TEST_USER.name);
+      const rawToken = new URL(verification.data.link).pathname.split('/').pop();
+      const user = await getDbUser();
+      expect(user.emailVerificationTokenHash).toBe(hashToken(rawToken));
+      expect(user.emailVerificationExpires.getTime()).toBeGreaterThanOrEqual(
+        startedAt + 24 * 60 * 60 * 1000 - 1000,
+      );
+      expect(user.emailVerificationExpires.getTime()).toBeLessThanOrEqual(
+        startedAt + 24 * 60 * 60 * 1000 + 1000,
+      );
+    } finally {
+      env.SENDLIBERTY_API_KEY = originalApiKey;
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('valid token verifies email and clears token fields', async () => {
     await registerUser();
 
@@ -226,6 +262,185 @@ describe('Email Verification', () => {
 // ── Forgot / Reset Password ───────────────────────────────────────────────────
 
 describe('Forgot / Reset Password', () => {
+  it('sends a clickable password-reset link and stores only its one-hour token hash', async () => {
+    const originalApiKey = env.SENDLIBERTY_API_KEY;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ messageId: 'mock-message-id' }),
+    });
+    env.SENDLIBERTY_API_KEY = 'test-api-key';
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      await registerUser();
+      fetchMock.mockClear();
+      const startedAt = Date.now();
+
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: TEST_USER.email });
+
+      expect(response.status).toBe(200);
+      expect(fetchMock).toHaveBeenCalledOnce();
+      const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(payload.subject).toBe('Reset your CampusBooks password');
+      expect(payload.html).toMatch(/<a href="[^"]+\/reset-password\?token=[a-f0-9]{64}">Reset your password<\/a>/);
+      const resetLink = payload.html.match(/<a href="([^"]+)">Reset your password<\/a>/)[1];
+      const rawToken = new URL(resetLink).searchParams.get('token');
+      const user = await getDbUser();
+      expect(user.passwordResetTokenHash).toBe(hashToken(rawToken));
+      expect(user.passwordResetExpires.getTime()).toBeGreaterThanOrEqual(
+        startedAt + 60 * 60 * 1000 - 1000,
+      );
+      expect(user.passwordResetExpires.getTime()).toBeLessThanOrEqual(
+        startedAt + 60 * 60 * 1000 + 1000,
+      );
+    } finally {
+      env.SENDLIBERTY_API_KEY = originalApiKey;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('stores the reset hash before sending so the emailed link is valid immediately', async () => {
+    const originalApiKey = env.SENDLIBERTY_API_KEY;
+    let resolveSend;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ messageId: 'mock-message-id' }),
+    });
+    env.SENDLIBERTY_API_KEY = 'test-api-key';
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      await registerUser();
+      fetchMock.mockClear();
+      fetchMock.mockImplementation(() => new Promise((resolve) => {
+        resolveSend = resolve;
+      }));
+
+      const user = await getDbUser();
+      const existingHash = hashToken('previous-reset-token');
+      const existingExpiry = new Date(Date.now() + 30 * 60 * 1000);
+      user.passwordResetTokenHash = existingHash;
+      user.passwordResetExpires = existingExpiry;
+      await user.save();
+
+      const startedAt = Date.now();
+      const requestPromise = request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: TEST_USER.email })
+        .then((response) => response);
+
+      await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+      const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+      const resetLink = payload.html.match(/<a href="([^"]+)">Reset your password<\/a>/)[1];
+      const rawToken = new URL(resetLink).searchParams.get('token');
+      const pendingUser = await getDbUser();
+
+      expect(pendingUser.passwordResetTokenHash).toBe(existingHash);
+      expect(pendingUser.passwordResetExpires.getTime()).toBe(existingExpiry.getTime());
+      expect(pendingUser.passwordResetPendingTokens).toHaveLength(1);
+      expect(pendingUser.passwordResetPendingTokens[0].tokenHash).toBe(hashToken(rawToken));
+      expect(pendingUser.passwordResetPendingTokens[0].tokenHash).not.toBe(rawToken);
+      expect(pendingUser.passwordResetPendingTokens[0].expires.getTime()).toBeGreaterThanOrEqual(
+        startedAt + 60 * 60 * 1000 - 1000,
+      );
+      expect(pendingUser.passwordResetPendingTokens[0].expires.getTime()).toBeLessThanOrEqual(
+        startedAt + 60 * 60 * 1000 + 1000,
+      );
+
+      const resetResponse = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: rawToken, password: 'ResetDuringDelivery123!' });
+      expect(resetResponse.status).toBe(204);
+
+      resolveSend({
+        ok: true,
+        status: 200,
+        json: async () => ({ messageId: 'mock-message-id' }),
+      });
+      const response = await requestPromise;
+
+      expect(response.status).toBe(200);
+      const deliveredUser = await getDbUser();
+      expect(deliveredUser.passwordResetTokenHash).toBeNull();
+      expect(deliveredUser.passwordResetExpires).toBeNull();
+      expect(deliveredUser.passwordResetPendingTokens).toHaveLength(0);
+    } finally {
+      env.SENDLIBERTY_API_KEY = originalApiKey;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it.each([
+    ['provider rejection', 'provider_rejected'],
+    ['network failure', 'network_or_configuration_failure'],
+  ])('keeps the generic response and existing reset state after %s', async (failure, category) => {
+    const originalApiKey = env.SENDLIBERTY_API_KEY;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ messageId: 'mock-message-id' }),
+    });
+    const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    env.SENDLIBERTY_API_KEY = 'test-api-key';
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      await registerUser();
+      fetchMock.mockReset();
+      if (failure === 'provider rejection') {
+        fetchMock.mockResolvedValue({
+          ok: false,
+          status: 400,
+          headers: { get: () => null },
+          json: async () => ({ error: 'private provider diagnostic' }),
+        });
+      } else {
+        fetchMock.mockRejectedValue(new Error('private network diagnostic'));
+      }
+
+      const existingHash = hashToken('previous-reset-token');
+      const existingExpiry = new Date(Date.now() + 30 * 60 * 1000);
+      const user = await getDbUser();
+      user.passwordResetTokenHash = existingHash;
+      user.passwordResetExpires = existingExpiry;
+      await user.save();
+
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: TEST_USER.email });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe(
+        'If that email is registered, we will process your password-reset request',
+      );
+      expect(fetchMock).toHaveBeenCalledOnce();
+
+      const unchangedUser = await getDbUser();
+      expect(unchangedUser.passwordResetTokenHash).toBe(existingHash);
+      expect(unchangedUser.passwordResetExpires.getTime()).toBe(existingExpiry.getTime());
+      expect(unchangedUser.passwordResetPendingTokens).toHaveLength(0);
+
+      expect(loggerSpy).toHaveBeenCalledWith(expect.objectContaining({
+        event: 'email_delivery_failed',
+        provider: 'sendliberty',
+        purpose: 'password_reset',
+        category,
+      }));
+      expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain(TEST_USER.email);
+      expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain('previous-reset-token');
+      expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain('private provider diagnostic');
+      expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain('private network diagnostic');
+    } finally {
+      env.SENDLIBERTY_API_KEY = originalApiKey;
+      vi.unstubAllGlobals();
+      loggerSpy.mockRestore();
+    }
+  });
+
   it('unknown email returns same 200 (no user enumeration)', async () => {
     const res = await request(app)
       .post('/api/auth/forgot-password')
@@ -701,20 +916,24 @@ describe('Profile API', () => {
 // ── Google OAuth Initiation & Mailer Security ─────────────────────────────────
 
 describe('OAuth Initiation & Mailer Security', () => {
-  it('GET /api/auth/google redirects with oauth_failed when Google credentials unconfigured', async () => {
+  it('GET /api/auth/google redirects based on configured Google credentials', async () => {
     const res = await request(app).get('/api/auth/google');
     expect(res.status).toBe(302);
-    expect(res.headers.location).toMatch(/oauth_failed/);
+    if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+      expect(res.headers.location).toMatch(/^https:\/\/accounts\.google\.com\//);
+    } else {
+      expect(res.headers.location).toMatch(/oauth_failed/);
+    }
   });
 
-  it('sendMail in production mode without EMAIL_HOST throws instead of silent console fallback', async () => {
+  it('sendMail in production mode without the Sendliberty API key rejects the send', async () => {
     const { sendMail } = await import('../src/utils/mailer.js');
     const originalEnv = env.NODE_ENV;
-    const originalHost = env.EMAIL_HOST;
+    const originalApiKey = env.SENDLIBERTY_API_KEY;
 
     try {
       env.NODE_ENV = 'production';
-      env.EMAIL_HOST = '';
+      env.SENDLIBERTY_API_KEY = '';
 
       await expect(
         sendMail({
@@ -722,10 +941,10 @@ describe('OAuth Initiation & Mailer Security', () => {
           subject: 'Production Test',
           text: 'Should fail',
         })
-      ).rejects.toThrow(/SMTP service is not configured in production mode/i);
+      ).rejects.toThrow(/SENDLIBERTY_API_KEY is not configured/i);
     } finally {
       env.NODE_ENV = originalEnv;
-      env.EMAIL_HOST = originalHost;
+      env.SENDLIBERTY_API_KEY = originalApiKey;
     }
   });
 });

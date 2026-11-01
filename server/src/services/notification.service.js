@@ -2,7 +2,7 @@ import { Notification } from '../models/Notification.js';
 import { Wanted } from '../models/Wanted.js';
 import { User } from '../models/User.js';
 import { Listing } from '../models/Listing.js';
-import { sendMail } from '../utils/mailer.js';
+import { sendNotificationEmail } from '../utils/mailer.js';
 import { getIO } from '../socket/index.js';
 import { env } from '../config/env.js';
 
@@ -22,23 +22,15 @@ export async function notify(userId, type, message, link, emailOptions = {}) {
     if (shouldSendEmail) {
       const portalUrl = link ? (link.startsWith('http') ? link : `${env.CLIENT_URL}${link.startsWith('/') ? '' : '/'}${link}`) : env.CLIENT_URL;
 
-      let mailPayload = {
+      const mailPayload = {
         to: user.email,
+        name: user.name,
         subject: emailOptions.subject || `[Campus Book Exchange] ${message}`,
-        text: emailOptions.text || `Hi ${user.name},\n\n${message}\n\nView details: ${portalUrl}\n\nThanks,\nCampus Book Exchange Team`,
+        message: emailOptions.text || message,
+        link: portalUrl,
       };
 
-      if (emailOptions.templateId) {
-        mailPayload.templateId = emailOptions.templateId;
-        mailPayload.variables = {
-          name: user.name || 'Student',
-          message: message,
-          link: portalUrl,
-          ...emailOptions.variables,
-        };
-      }
-
-      sendMail(mailPayload).catch((err) => {
+      sendNotificationEmail(mailPayload).catch((err) => {
         console.error('[Notification Mail Error]:', err.message);
       });
     }

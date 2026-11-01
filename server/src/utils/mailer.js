@@ -1,131 +1,147 @@
-import { Resend } from 'resend';
 import { env } from '../config/env.js';
 
-let resendInstance = null;
-function getResend() {
-  if (!resendInstance && env.RESEND_API_KEY) {
-    resendInstance = new Resend(env.RESEND_API_KEY);
-  }
-  return resendInstance;
-}
+const SENDLIBERTY_ENDPOINT = 'https://sendliberty.com/api/send';
+const REQUEST_TIMEOUT_MS = 10_000;
 
-// Cache template slug/alias -> actual template id
-const templateIdCache = new Map();
-
-/**
- * Resolve template identifier (handles either raw UUID/template ID or slug/alias)
- */
-async function resolveTemplateId(slugOrId) {
-  if (!slugOrId) return null;
-
-  // If already in cache, return resolved id
-  if (templateIdCache.has(slugOrId)) {
-    return templateIdCache.get(slugOrId);
-  }
-
-  // UUID format check: if it already looks like a UUID or template id (e.g., starts with d- or 36 char hex-dash)
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slugOrId);
-  if (isUuid) {
-    templateIdCache.set(slugOrId, slugOrId);
-    return slugOrId;
-  }
-
-  const resend = getResend();
-  if (!resend) return slugOrId;
-
-  try {
-    // Attempt lookup via Resend templates API list
-    const { data } = await resend.templates.list().catch(() => ({ data: null }));
-    if (data && Array.isArray(data)) {
-      const match = data.find((t) => t.alias === slugOrId || t.name === slugOrId || t.id === slugOrId);
-      if (match && match.id) {
-        templateIdCache.set(slugOrId, match.id);
-        return match.id;
-      }
-    }
-  } catch (err) {
-    // Graceful fallback to provided slugOrId
-  }
-
-  // Fallback to slugOrId directly as Resend accepts template id or alias depending on deployment
-  templateIdCache.set(slugOrId, slugOrId);
-  return slugOrId;
-}
+// Required variables per built-in template slug
+const TEMPLATE_REQUIRED_VARS = {
+  'verify-email': ['name', 'link'],
+  'welcome': ['name', 'product'],
+  'otp': ['name', 'code'],
+  'account-suspended': ['name', 'reason', 'support_url'],
+  'campusbooks-notification': ['name', 'subject', 'message', 'link'],
+};
 
 /**
- * Send email using raw text/html or Resend template
+ * Validate that all required variables for a template slug are present and non-empty.
+ * Returns an array of missing variable names (empty means valid).
  */
-export const sendMail = async ({ to, subject, text, html, templateId, variables }) => {
-  if (!to) return null;
+function getMissingVars(templateSlug, data) {
+  const required = TEMPLATE_REQUIRED_VARS[templateSlug];
+  if (!required) return [];
+  return required.filter((key) => (
+    !data || typeof data[key] !== 'string' || data[key].trim() === ''
+  ));
+}
 
-  const resend = getResend();
+const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}[character]));
 
-  if (!resend) {
-    if (env.NODE_ENV === 'production') {
-      console.warn('[MAILER PROD WARNING] Resend API key is not configured. Email not dispatched to:', to);
-      return null;
+const textAsHtml = (text) => (
+  `<div style="font-family:Arial,sans-serif;white-space:pre-wrap">${escapeHtml(text)}</div>`
+);
+
+export class MailerError extends Error {
+  constructor(message, { statusCode, retryAfter } = {}) {
+    super(message);
+    this.name = 'MailerError';
+    this.statusCode = statusCode;
+    this.retryAfter = retryAfter;
+  }
+}
+
+export const sendMail = async ({ to, templateSlug, data, subject, html, text }) => {
+  if (!to || typeof to !== 'string') {
+    throw new MailerError('Sendliberty recipient is required');
+  }
+
+  if (templateSlug) {
+    if (!Object.hasOwn(TEMPLATE_REQUIRED_VARS, templateSlug)) {
+      throw new MailerError(`Sendliberty template slug is not documented: "${templateSlug}"`);
     }
-
-    console.log('\n[MAILER DEV SIMULATION]');
-    console.log(`To: ${to}`);
-    console.log(`Subject: ${subject || '(Template subject)'}`);
-    if (templateId) {
-      console.log(`Template: ${templateId}`);
-      console.log(`Variables:`, variables);
+    const missing = getMissingVars(templateSlug, data);
+    if (missing.length > 0) {
+      throw new MailerError(
+        `Sendliberty template "${templateSlug}" is missing required variables: ${missing.join(', ')}`,
+      );
     }
-    if (text) console.log(`Body:\n${text}\n`);
-    return { id: 'dev-simulated-id' };
+  } else if (!subject || (!html && !text)) {
+    throw new MailerError('Sendliberty raw email requires subject and html or text');
+  }
+
+  const apiKey = env.SENDLIBERTY_API_KEY;
+  if (!apiKey) {
+    throw new MailerError('SENDLIBERTY_API_KEY is not configured; email was not sent');
+  }
+
+  const payload = { to };
+
+  if (templateSlug) {
+    payload.template = templateSlug;
+    payload.data = data || {};
+  } else {
+    payload.subject = subject;
+    payload.html = html || textAsHtml(text);
+    if (text) payload.text = text;
   }
 
   try {
-    let payload = {
-      from: env.EMAIL_FROM,
-      to: Array.isArray(to) ? to : [to],
-    };
+    const response = await fetch(SENDLIBERTY_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
 
-    if (templateId) {
-      const resolvedId = await resolveTemplateId(templateId);
-      payload.template = {
-        id: resolvedId,
-        variables: variables || {},
-      };
-      // Provide default fallback subject in case template doesn't specify one
-      payload.subject = subject || 'CampusBooks Notification';
-    } else {
-      payload.subject = subject || 'CampusBooks Notification';
-      if (text) payload.text = text;
-      if (html) payload.html = html;
+    const body = await response.json().catch(() => null);
+
+    if (!response.ok || body?.success === false || body?.error) {
+      const statusCode = response.status;
+      const retryAfter = response.headers?.get?.('retry-after') || undefined;
+      const issue = statusCode === 429
+        ? `Sendliberty rate limit reached${retryAfter ? `; retry after ${retryAfter} seconds` : ''}`
+        : statusCode === 401
+          ? 'Sendliberty authentication failed; check SENDLIBERTY_API_KEY'
+          : statusCode === 403
+            ? 'Sendliberty rejected the sender account or API key permissions'
+            : statusCode === 400
+              ? `Sendliberty rejected the request; check the template slug and required variables${templateSlug ? ` for "${templateSlug}"` : ''}`
+              : `Sendliberty rejected the request with HTTP ${statusCode}`;
+
+      throw new MailerError(issue, { statusCode, retryAfter });
     }
 
-    const { data, error } = await resend.emails.send(payload);
-
-    if (error) {
-      console.error(`[MAILER ERROR] Resend rejected delivery to ${JSON.stringify(to)}:`, error.message, '| Error code / name:', error.name);
-
-      // If template send fails (e.g. invalid template ID or slug rejection), attempt fallback to text/subject if available
-      if (templateId && (text || html || subject)) {
-        console.warn(`[MAILER] Template send failed (${error.message}). Attempting fallback to direct email.`);
-        const fallback = await resend.emails.send({
-          from: env.EMAIL_FROM,
-          to,
-          subject: subject || 'CampusBooks Notification',
-          text: text || JSON.stringify(variables, null, 2),
-          html: html,
-        });
-        if (fallback.error) {
-          console.error('[MAILER] Fallback email also failed:', fallback.error.message);
-          return null;
-        }
-        return fallback.data;
-      }
-
-      return null;
-    }
-
-    console.log(`[MAILER SUCCESS] Email delivered via Resend. Message ID: ${data?.id}`);
-    return data;
+    return body;
   } catch (err) {
-    console.error('[MAILER] Unexpected sendMail error:', err.message);
-    return null;
+    if (err instanceof MailerError) throw err;
+    throw new MailerError(`Sendliberty network request failed (${err.name || 'network error'})`);
   }
 };
+
+export const sendPasswordResetEmail = ({ to, name, link }) => {
+  if (!link || typeof link !== 'string') {
+    throw new MailerError('Password reset email requires a reset link');
+  }
+
+  const greetingName = name || 'Student';
+  const safeName = escapeHtml(greetingName);
+  const safeLink = escapeHtml(link);
+  const text = `Hi ${greetingName},\n\nUse this link to reset your CampusBooks password. It expires in one hour:\n${link}\n\nIf you did not request a password reset, you can ignore this email.`;
+  const html = `<p>Hi ${safeName},</p><p>Use the link below to reset your CampusBooks password. It expires in one hour.</p><p><a href="${safeLink}">Reset your password</a></p><p>If you did not request a password reset, you can ignore this email.</p>`;
+
+  return sendMail({
+    to,
+    subject: 'Reset your CampusBooks password',
+    html,
+    text,
+  });
+};
+
+export const sendNotificationEmail = ({ to, name, subject, message, link }) => sendMail({
+  to,
+  templateSlug: 'campusbooks-notification',
+  data: {
+    name: name || 'Student',
+    subject,
+    message,
+    link,
+  },
+});

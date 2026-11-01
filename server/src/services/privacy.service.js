@@ -157,6 +157,8 @@ export class PrivacyService {
     user.authProviders = [];
     user.emailVerificationTokenHash = null;
     user.passwordResetTokenHash = null;
+    user.passwordResetExpires = null;
+    user.passwordResetPendingTokens = [];
     user.sessionVersion = (user.sessionVersion ?? 0) + 1;
     user.deletedAt = new Date();
 
@@ -165,4 +167,3 @@ export class PrivacyService {
     return { message: 'Account deleted successfully' };
   }
 }
-

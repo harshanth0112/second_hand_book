@@ -192,8 +192,6 @@ export function setupSocketServer(httpServer) {
 
         // Send email notification to the recipient asynchronously
         const recipientId = isBuyer ? conv.seller : conv.buyer;
-        const conversationUrl = `${env.CLIENT_URL}/chat/${conversationId}`;
-
         if (type === 'offer') {
           // Notify seller of new book offer
           const listing = await Listing.findById(conv.listing).select('title').lean();
@@ -203,14 +201,7 @@ export function setupSocketServer(httpServer) {
             `${user.name} made an offer of ₹${messageData.offerAmount} on "${listing?.title || 'your book'}".`,
             `/chat/${conversationId}`,
             {
-              templateId: env.RESEND_TEMPLATE_BOOK_OFFER,
               subject: `New book offer of ₹${messageData.offerAmount} on "${listing?.title || 'your book'}"`,
-              variables: {
-                buyer_name: user.name || 'A buyer',
-                book_title: listing?.title || 'Textbook',
-                offered_price: `₹${messageData.offerAmount}`,
-                conversation_url: conversationUrl,
-              },
             }
           ).catch((e) => console.error('[Offer Notify Error]:', e.message));
         } else {
@@ -221,13 +212,7 @@ export function setupSocketServer(httpServer) {
             `New message from ${user.name}: "${messageData.text.length > 50 ? messageData.text.substring(0, 47) + '...' : messageData.text}"`,
             `/chat/${conversationId}`,
             {
-              templateId: env.RESEND_TEMPLATE_NEW_MESSAGE,
               subject: `New message from ${user.name}`,
-              variables: {
-                sender_name: user.name || 'Someone',
-                message_preview: messageData.text.length > 100 ? messageData.text.substring(0, 97) + '...' : messageData.text,
-                conversation_url: conversationUrl,
-              },
             }
           ).catch((e) => console.error('[Message Notify Error]:', e.message));
         }

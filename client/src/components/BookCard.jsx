@@ -70,6 +70,7 @@ export function BookCard({ listing, isWishlisted: initialWishlisted, onWishlistC
                 disabled={loading}
                 className="p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-700 hover:text-red-500 shadow-sm transition"
                 title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                aria-label={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
               >
                 <Heart
                   className={`w-3.5 h-3.5 ${

@@ -29,12 +29,16 @@ export function FilterBar({ filters, onChange, onClear }) {
           value={filters.q || ''}
           onChange={handleChange}
           placeholder="Search textbooks by title or author..."
+          aria-label="Search textbooks by title or author"
           className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
         />
         {filters.q && (
           <button
+            type="button"
             onClick={() => onChange({ q: '' })}
             className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+            title="Clear search"
+            aria-label="Clear search"
           >
             <X className="w-4 h-4" />
           </button>

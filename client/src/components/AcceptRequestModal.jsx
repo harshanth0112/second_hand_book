@@ -65,8 +65,11 @@ export function AcceptRequestModal({ request, isOpen, onClose, onAccept, accepti
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
       <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl border border-gray-200 relative animate-in fade-in duration-200">
         <button
+          type="button"
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+          aria-label="Close modal"
+          title="Close modal"
         >
           <X className="w-5 h-5" />
         </button>

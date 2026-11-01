@@ -34,8 +34,11 @@ export function ReviewModal({ isOpen, onClose, request, onReviewed }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
       <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
         <button
+          type="button"
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1"
+          aria-label="Close modal"
+          title="Close modal"
         >
           <X className="w-5 h-5" />
         </button>

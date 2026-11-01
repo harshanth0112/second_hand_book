@@ -11,6 +11,7 @@ export function Pagination({ page, totalPages, onPageChange }) {
         disabled={page <= 1}
         className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent transition"
         title="Previous Page"
+        aria-label="Previous Page"
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -24,6 +25,7 @@ export function Pagination({ page, totalPages, onPageChange }) {
         disabled={page >= totalPages}
         className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent transition"
         title="Next Page"
+        aria-label="Next Page"
       >
         <ChevronRight className="w-4 h-4" />
       </button>

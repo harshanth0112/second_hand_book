@@ -99,6 +99,8 @@ export const sendMail = async ({ to, subject, text, html, templateId, variables 
     const { data, error } = await resend.emails.send(payload);
 
     if (error) {
+      console.error(`[MAILER ERROR] Resend rejected delivery to ${JSON.stringify(to)}:`, error.message, '| Error code / name:', error.name);
+
       // If template send fails (e.g. invalid template ID or slug rejection), attempt fallback to text/subject if available
       if (templateId && (text || html || subject)) {
         console.warn(`[MAILER] Template send failed (${error.message}). Attempting fallback to direct email.`);
@@ -116,10 +118,10 @@ export const sendMail = async ({ to, subject, text, html, templateId, variables 
         return fallback.data;
       }
 
-      console.error('[MAILER] Resend delivery failed:', error.message);
       return null;
     }
 
+    console.log(`[MAILER SUCCESS] Email delivered via Resend. Message ID: ${data?.id}`);
     return data;
   } catch (err) {
     console.error('[MAILER] Unexpected sendMail error:', err.message);

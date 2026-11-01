@@ -6,19 +6,24 @@ import { env } from '../config/env.js';
 
 // ── Cookie helpers ────────────────────────────────────────────────────────────
 
-const getCookieOptions = () => ({
-  httpOnly: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
-  path: '/',
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
-});
+const getCookieOptions = (isClear = false) => {
+  const options = {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/',
+  };
+  if (!isClear) {
+    options.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+  }
+  return options;
+};
 
 /**
  * Set the authentication cookie on the response.
  */
 const setAuthCookie = (res, token) => {
-  res.cookie(env.COOKIE_NAME, token, getCookieOptions());
+  res.cookie(env.COOKIE_NAME, token, getCookieOptions(false));
 };
 
 // ── AuthController ────────────────────────────────────────────────────────────
@@ -48,7 +53,7 @@ export class AuthController {
 
   static async logout(req, res, next) {
     try {
-      res.clearCookie(env.COOKIE_NAME, getCookieOptions());
+      res.clearCookie(env.COOKIE_NAME, getCookieOptions(true));
       return res.status(204).send();
     } catch (error) {
       next(error);

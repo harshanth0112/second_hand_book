@@ -77,21 +77,25 @@ export function ImageUploader({ existingImages = [], onUpload, onRemoveExisting,
 
       {/* Grid of images (existing + newly selected) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {existingImages.map((url, idx) => (
-          <div key={`existing-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
-            <img src={url} alt={`Listing photo ${idx + 1}`} className="w-full h-full object-cover" />
-            {onRemoveExisting && (
-              <button
-                type="button"
-                onClick={() => onRemoveExisting(idx)}
-                className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition"
-                title="Remove photo"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        ))}
+        {existingImages.map((imgItem, idx) => {
+          const url = typeof imgItem === 'object' && imgItem?.url ? imgItem.url : imgItem;
+          return (
+            <div key={`existing-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+              <img src={url} alt={`Listing photo ${idx + 1}`} className="w-full h-full object-cover" />
+              {onRemoveExisting && (
+                <button
+                  type="button"
+                  onClick={() => onRemoveExisting(idx)}
+                  className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition"
+                  title="Remove photo"
+                  aria-label="Remove photo"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          );
+        })}
 
         {previews.map((previewUrl, idx) => (
           <div key={`preview-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden border-2 border-dashed border-blue-300 bg-blue-50/30">

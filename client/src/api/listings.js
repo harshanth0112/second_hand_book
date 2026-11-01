@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, getApiUrl } from './client';
 
 export async function createListing(data) {
   return apiClient('/listings', {
@@ -80,7 +80,7 @@ export async function uploadListingImages(id, files) {
     formData.append('images', file);
   }
 
-  const res = await fetch(`/api/listings/${id}/images`, {
+  const res = await fetch(getApiUrl(`/listings/${id}/images`), {
     method: 'POST',
     credentials: 'include',
     body: formData,

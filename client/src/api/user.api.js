@@ -1,4 +1,4 @@
-import { apiClient } from './client.js';
+import { apiClient, getApiUrl } from './client.js';
 
 export const userApi = {
   getProfile: () => {
@@ -12,6 +12,25 @@ export const userApi = {
       method: 'PUT',
       body: data,
     });
+  },
+
+  uploadAvatar: async (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const res = await fetch(getApiUrl('/me/avatar'), {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const error = new Error(data?.message || 'Failed to upload avatar');
+      error.status = res.status;
+      throw error;
+    }
+    return data;
   },
 
   changePassword: (currentPassword, newPassword) => {

@@ -99,6 +99,18 @@ export class ListingService {
 
     listing.status = 'removed';
     await listing.save();
+
+    // Clean up associated images from Cloudinary upon deletion
+    if (listing.images && listing.images.length > 0) {
+      for (const img of listing.images) {
+        const idOrUrl = typeof img === 'object' && img?.publicId ? img.publicId : (img?.url || img);
+        if (idOrUrl) {
+          ImageService.deleteImage(idOrUrl).catch((err) =>
+            console.error('[Listing deleteImage Error]:', err.message)
+          );
+        }
+      }
+    }
   }
 
   static async addImages(id, userId, files) {
@@ -128,8 +140,11 @@ export class ListingService {
     }
 
     for (const file of files) {
-      const uploaded = await ImageService.uploadImage(file.buffer);
-      listing.images.push(uploaded.url);
+      const uploaded = await ImageService.uploadImage(file.buffer, 'book-exchange/listings');
+      listing.images.push({
+        url: uploaded.url,
+        publicId: uploaded.publicId,
+      });
     }
 
     await listing.save();
@@ -156,11 +171,12 @@ export class ListingService {
       throw error;
     }
 
-    const [removedUrl] = listing.images.splice(index, 1);
+    const [removed] = listing.images.splice(index, 1);
     await listing.save();
 
-    if (removedUrl) {
-      await ImageService.deleteImage(removedUrl);
+    if (removed) {
+      const idOrUrl = typeof removed === 'object' && removed?.publicId ? removed.publicId : (removed?.url || removed);
+      await ImageService.deleteImage(idOrUrl);
     }
 
     return listing;

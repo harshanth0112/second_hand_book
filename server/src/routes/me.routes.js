@@ -10,6 +10,7 @@ import {
 } from '../controllers/notification.controller.js';
 import { validateBody, validateQuery } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
+import { uploadSingleAvatar } from '../middleware/upload.js';
 import { changePasswordSchema, updateProfileSchema } from '../validators/auth.validator.js';
 import { myListingsQuerySchema } from '../validators/listing.validator.js';
 import { wishlistQuerySchema } from '../validators/notification.validator.js';
@@ -28,6 +29,9 @@ router.get('/dashboard', TrustController.getSellerDashboard);
 
 // PUT /api/me — update profile fields
 router.put('/', validateBody(updateProfileSchema), AuthController.updateProfile);
+
+// POST /api/me/avatar — upload profile photo
+router.post('/avatar', uploadSingleAvatar, AuthController.uploadAvatar);
 
 // PUT /api/me/password — change password
 router.put('/password', validateBody(changePasswordSchema), AuthController.changePassword);

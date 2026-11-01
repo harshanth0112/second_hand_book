@@ -92,7 +92,7 @@ const listingSchema = new mongoose.Schema(
       default: '',
     },
     images: {
-      type: [String],
+      type: [mongoose.Schema.Types.Mixed], // Supports legacy String URLs and new { url, publicId } objects
       default: [],
       validate: {
         validator: function (v) {

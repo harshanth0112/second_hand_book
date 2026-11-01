@@ -39,3 +39,27 @@ export const uploadImages = (req, res, next) => {
   });
 };
 
+const singleAvatarMulter = multer({
+  storage,
+  limits: {
+    fileSize: MAX_FILE_SIZE,
+    files: 1,
+  },
+  fileFilter,
+});
+
+export const uploadSingleAvatar = (req, res, next) => {
+  singleAvatarMulter.single('avatar')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ message: 'Avatar image too large. Maximum size is 2 MB' });
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ message: 'Expected a single file in "avatar" field' });
+      }
+      return res.status(400).json({ message: err.message || 'Avatar upload failed' });
+    }
+    next();
+  });
+};
+

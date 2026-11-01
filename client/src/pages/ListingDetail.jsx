@@ -94,7 +94,7 @@ export function ListingDetail() {
           <div className="aspect-[4/5] bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex items-center justify-center">
             {listing.images && listing.images.length > 0 ? (
               <img
-                src={listing.images[activeImageIdx] || listing.images[0]}
+                src={typeof (listing.images[activeImageIdx] || listing.images[0]) === 'object' ? (listing.images[activeImageIdx]?.url || listing.images[0]?.url) : (listing.images[activeImageIdx] || listing.images[0])}
                 alt={listing.title}
                 className="w-full h-full object-contain"
               />
@@ -116,7 +116,11 @@ export function ListingDetail() {
                     activeImageIdx === i ? 'border-blue-600 ring-2 ring-blue-500/20' : 'border-gray-200 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt={`Thumbnail ${i + 1}`} className="w-full h-full object-cover" />
+                  <img
+                    src={typeof img === 'object' ? img.url : img}
+                    alt={`Thumbnail ${i + 1}`}
+                    className="w-full h-full object-cover"
+                  />
                 </button>
               ))}
             </div>

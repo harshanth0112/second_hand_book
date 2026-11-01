@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { userApi } from '../api/user.api';
 import { DEPARTMENTS } from '../constants';
@@ -14,6 +14,8 @@ import {
   Download,
   Trash2,
   Shield,
+  Camera,
+  Upload,
 } from 'lucide-react';
 import { exportUserData } from '../api/privacy';
 import { DeleteAccountModal } from '../components/DeleteAccountModal';
@@ -59,10 +61,55 @@ export const Profile = () => {
   const [profileError, setProfileError] = useState('');
   const [profileFieldErrors, setProfileFieldErrors] = useState({});
 
+  // Avatar upload states
+  const fileInputRef = useRef(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+  const [avatarSuccess, setAvatarSuccess] = useState('');
+
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordFieldErrors, setPasswordFieldErrors] = useState({});
+
+  const handleAvatarFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so user can pick the same file again if failed
+    e.target.value = '';
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setAvatarError('Only JPEG, PNG and WebP images are allowed.');
+      setAvatarSuccess('');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarError('Avatar image must be smaller than 2 MB.');
+      setAvatarSuccess('');
+      return;
+    }
+
+    setAvatarUploading(true);
+    setAvatarError('');
+    setAvatarSuccess('');
+
+    try {
+      const updatedUser = await userApi.uploadAvatar(file);
+      updateUser(updatedUser);
+      setProfileData((prev) => ({
+        ...prev,
+        avatar: updatedUser.avatar || '',
+      }));
+      setAvatarSuccess('Profile photo updated successfully!');
+    } catch (err) {
+      setAvatarError(err.message || 'Failed to upload avatar photo');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   const handleProfileChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -229,22 +276,60 @@ export const Profile = () => {
       {/* Account Overview Card */}
       <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-2xl overflow-hidden border border-blue-200">
-            {profileData.avatar ? (
-              <img
-                src={profileData.avatar}
-                alt={user?.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
-            ) : (
-              <span>{user?.name?.charAt(0).toUpperCase() || 'U'}</span>
-            )}
+          <div className="relative group">
+            <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-2xl overflow-hidden border border-blue-200">
+              {profileData.avatar ? (
+                <img
+                  src={profileData.avatar}
+                  alt={user?.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <span>{user?.name?.charAt(0).toUpperCase() || 'U'}</span>
+              )}
+            </div>
+            {/* Hidden file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleAvatarFileChange}
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+            />
+            {/* Upload button overlay */}
+            <button
+              type="button"
+              disabled={avatarUploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute inset-0 rounded-full bg-black/40 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-100 disabled:bg-black/60 cursor-pointer"
+              title="Change profile photo"
+              aria-label="Change profile photo"
+            >
+              {avatarUploading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-white" />
+              ) : (
+                <>
+                  <Camera className="w-5 h-5" />
+                  <span className="text-[10px] font-medium mt-0.5">Edit</span>
+                </>
+              )}
+            </button>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{user?.name}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-gray-900">{user?.name}</h2>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium underline flex items-center gap-1"
+              >
+                {avatarUploading ? 'Uploading...' : 'Change photo'}
+              </button>
+            </div>
             <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-gray-600">
               <span className="flex items-center gap-1">
                 <Mail className="w-3.5 h-3.5" />
@@ -253,6 +338,18 @@ export const Profile = () => {
               <span>•</span>
               <span className="capitalize">{user?.role}</span>
             </div>
+            {avatarError && (
+              <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" />
+                {avatarError}
+              </p>
+            )}
+            {avatarSuccess && (
+              <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {avatarSuccess}
+              </p>
+            )}
           </div>
         </div>
 
@@ -396,19 +493,33 @@ export const Profile = () => {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="profile-avatar" className="block text-sm font-medium text-gray-700">
-                Avatar Image URL (optional)
-              </label>
-              <input
-                id="profile-avatar"
-                name="avatar"
-                type="url"
-                placeholder="https://example.com/avatar.jpg"
-                value={profileData.avatar}
-                onChange={handleProfileChange}
-                className="mt-1 block w-full px-4 py-2.5 rounded-xl border border-gray-300 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition sm:text-sm"
-              />
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-900">
+                  Profile Photo
+                </label>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Upload a photo (JPEG, PNG or WebP, up to 2 MB).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm transition disabled:opacity-50"
+              >
+                {avatarUploading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload New Photo</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <div className="pt-2">

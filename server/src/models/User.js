@@ -75,6 +75,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    avatarPublicId: {
+      type: String,
+      default: '',
+    },
     emailNotifications: {
       type: Boolean,
       default: true,

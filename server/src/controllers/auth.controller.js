@@ -292,4 +292,33 @@ export class AuthController {
       next(error);
     }
   }
+
+  static async uploadAvatar(req, res, next) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No avatar image file provided' });
+      }
+
+      const { ImageService } = await import('../services/image.service.js');
+      const uploaded = await ImageService.uploadImage(req.file.buffer, 'book-exchange/avatars');
+
+      const user = req.user;
+      const oldPublicId = user.avatarPublicId;
+
+      user.avatar = uploaded.url;
+      user.avatarPublicId = uploaded.publicId;
+      await user.save();
+
+      // Clean up previous Cloudinary avatar only after database save succeeds
+      if (oldPublicId) {
+        ImageService.deleteImage(oldPublicId).catch((err) =>
+          console.error('[uploadAvatar] Failed to delete old avatar:', err.message)
+        );
+      }
+
+      return res.status(200).json(user.toMeJSON());
+    } catch (error) {
+      next(error);
+    }
+  }
 }

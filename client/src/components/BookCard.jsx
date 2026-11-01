@@ -11,7 +11,8 @@ export function BookCard({ listing, isWishlisted: initialWishlisted, onWishlistC
   );
   const [loading, setLoading] = useState(false);
 
-  const thumbnail = listing.images && listing.images.length > 0 ? listing.images[0] : listing.coverUrl;
+  const firstImg = listing.images && listing.images.length > 0 ? listing.images[0] : null;
+  const thumbnail = (typeof firstImg === 'object' && firstImg?.url ? firstImg.url : firstImg) || listing.coverUrl;
 
   const handleToggleWishlist = async (e) => {
     e.preventDefault();

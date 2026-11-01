@@ -10,7 +10,7 @@ if (env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SE
 }
 
 export class ImageService {
-  static async uploadImage(buffer) {
+  static async uploadImage(buffer, folder = 'book-exchange/listings') {
     if (!env.CLOUDINARY_CLOUD_NAME) {
       throw new Error('Cloudinary is not configured');
     }
@@ -18,7 +18,7 @@ export class ImageService {
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
-          folder: 'book-exchange/listings',
+          folder,
           transformation: [{ width: 800, crop: 'limit' }],
           resource_type: 'image',
         },

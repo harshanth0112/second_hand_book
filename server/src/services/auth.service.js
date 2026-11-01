@@ -191,8 +191,12 @@ export class AuthService {
 
     await sendMail({
       to: user.email,
-      subject: 'Reset your Book Exchange password',
-      text: `Hello ${user.name},\n\nYou requested a password reset. Click the link below to set a new password:\n\n${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you did not request this, please ignore this email.\n`,
+      templateId: env.RESEND_TEMPLATE_PASSWORD_RESET || 'password-reset',
+      variables: {
+        USER_NAME: user.name || 'there',
+        RESET_URL: resetUrl,
+        EXPIRY_TIME: '1 hour',
+      },
     });
   }
 
@@ -325,15 +329,10 @@ export class AuthService {
         throw err;
       }
 
-      // Keep avatar and verification updated if missing
+      // Keep avatar updated if missing
       let modified = false;
       if (!user.avatar && avatar) {
         user.avatar = avatar;
-        modified = true;
-      }
-      if (!user.emailVerified && emailVerified) {
-        user.emailVerified = true;
-        user.isVerified = true;
         modified = true;
       }
       if (modified) {
@@ -373,32 +372,43 @@ export class AuthService {
       }
 
       user.googleId = googleId;
-      user.emailVerified = true;
-      user.isVerified = true;
       if (!user.authProviders.includes('google')) {
         user.authProviders.push('google');
       }
       if (!user.avatar && avatar) {
         user.avatar = avatar;
       }
+
+      // If user hasn't verified email on CampusBooks yet, send verification link
+      if (!user.emailVerified) {
+        await AuthService.sendVerificationEmail(user).catch((err) =>
+          console.error('[Google Link Verification Email Error]:', err.message)
+        );
+      }
+
       await user.save();
       const token = signToken(user);
       return { user, token };
     }
 
-    // 3. New Google user
+    // 3. New Google user — require email verification link via Gmail
     user = await User.create({
       name: name || email.split('@')[0],
       email,
       password: null, // Google-only; set via password reset if needed
       googleId,
-      emailVerified: Boolean(emailVerified),
-      isVerified: Boolean(emailVerified),
+      emailVerified: false,
+      isVerified: false,
       authProviders: ['google'],
       sessionVersion: 0,
       avatar: avatar || '',
       role: 'student',
     });
+
+    // Send verification link to user's Gmail address
+    await AuthService.sendVerificationEmail(user).catch((err) =>
+      console.error('[Google Signup Verification Email Error]:', err.message)
+    );
 
     const token = signToken(user);
     return { user, token };

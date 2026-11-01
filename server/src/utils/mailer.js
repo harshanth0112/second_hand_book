@@ -80,7 +80,7 @@ export const sendMail = async ({ to, subject, text, html, templateId, variables 
   try {
     let payload = {
       from: env.EMAIL_FROM,
-      to,
+      to: Array.isArray(to) ? to : [to],
     };
 
     if (templateId) {

@@ -21,6 +21,7 @@ const envSchema = z.object({
   // Resend Email Templates
   RESEND_TEMPLATE_EMAIL_CHANGED: z.string().optional().default('email-address-changed'),
   RESEND_TEMPLATE_PASSWORD_CHANGED: z.string().optional().default('password-change-alert'),
+  RESEND_TEMPLATE_PASSWORD_RESET: z.string().optional().default('password-reset'),
   RESEND_TEMPLATE_BOOK_OFFER: z.string().optional().default('book-offer-notification'),
   RESEND_TEMPLATE_BOOK_ENQUIRY: z.string().optional().default('new-book-enquiry'),
   RESEND_TEMPLATE_NEW_MESSAGE: z.string().optional().default('new-message-notification'),

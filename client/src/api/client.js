@@ -9,6 +9,11 @@ if (!API_BASE && import.meta.env.PROD) {
   );
 }
 
+export const getApiUrl = (path = '') => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE}${normalizedPath}`;
+};
+
 export async function apiClient(endpoint, options = {}) {
   const { body, headers = {}, ...customConfig } = options;
 

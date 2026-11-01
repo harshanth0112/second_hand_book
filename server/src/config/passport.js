@@ -27,7 +27,11 @@ export const configurePassport = () => {
         async (_accessToken, _refreshToken, profile, done) => {
           try {
             const email =
-              profile.emails?.[0]?.value?.toLowerCase() ?? '';
+              profile.emails?.[0]?.value?.toLowerCase()?.trim() ?? '';
+            const emailVerified =
+              profile.emails?.[0]?.verified === true ||
+              profile._json?.email_verified === true ||
+              profile._json?.email_verified === 'true';
             const name = profile.displayName || email.split('@')[0];
             const avatar = profile.photos?.[0]?.value || '';
             const googleId = profile.id;
@@ -41,6 +45,7 @@ export const configurePassport = () => {
               email,
               name,
               avatar,
+              emailVerified,
             });
 
             return done(null, { user, token });

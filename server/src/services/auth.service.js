@@ -278,21 +278,72 @@ export class AuthService {
   /**
    * Find or create a user from Google profile data.
    * Logic:
-   *   1. Find by googleId → return existing user.
-   *   2. Find by email → link Google provider to existing account.
+   *   1. Find by googleId → return existing user (checking banned/deleted status).
+   *   2. Find by email → link Google provider to existing account if Google email is verified.
    *   3. Create new account with Google data.
    */
-  static async findOrCreateGoogleUser({ googleId, email, name, avatar }) {
-    // 1. Existing Google user
+  static async findOrCreateGoogleUser({ googleId, email, name, avatar, emailVerified = true }) {
+    // 1. Existing Google user by googleId
     let user = await User.findOne({ googleId });
     if (user) {
+      if (user.deletedAt) {
+        const err = new Error('This account has been deleted');
+        err.status = 403;
+        throw err;
+      }
+      if (user.isBanned) {
+        const err = new Error('Your account has been banned');
+        err.status = 403;
+        throw err;
+      }
+
+      // Keep avatar and verification updated if missing
+      let modified = false;
+      if (!user.avatar && avatar) {
+        user.avatar = avatar;
+        modified = true;
+      }
+      if (!user.emailVerified && emailVerified) {
+        user.emailVerified = true;
+        user.isVerified = true;
+        modified = true;
+      }
+      if (modified) {
+        await user.save();
+      }
+
       const token = signToken(user);
       return { user, token };
     }
 
-    // 2. Existing email account → link Google
+    // 2. Existing account with matching email → link Google securely
     user = await User.findOne({ email });
     if (user) {
+      if (user.deletedAt) {
+        const err = new Error('This account has been deleted');
+        err.status = 403;
+        throw err;
+      }
+      if (user.isBanned) {
+        const err = new Error('Your account has been banned');
+        err.status = 403;
+        throw err;
+      }
+
+      // Security check: Only link if Google verified this email address
+      if (!emailVerified) {
+        const err = new Error('Google email address must be verified to link accounts');
+        err.status = 400;
+        throw err;
+      }
+
+      // Prevent takeover if this user already has a different googleId attached
+      if (user.googleId && user.googleId !== googleId) {
+        const err = new Error('Account is already linked to a different Google account');
+        err.status = 409;
+        throw err;
+      }
+
       user.googleId = googleId;
       user.emailVerified = true;
       user.isVerified = true;
@@ -309,12 +360,12 @@ export class AuthService {
 
     // 3. New Google user
     user = await User.create({
-      name,
+      name: name || email.split('@')[0],
       email,
       password: null, // Google-only; set via password reset if needed
       googleId,
-      emailVerified: true,
-      isVerified: true,
+      emailVerified: Boolean(emailVerified),
+      isVerified: Boolean(emailVerified),
       authProviders: ['google'],
       sessionVersion: 0,
       avatar: avatar || '',

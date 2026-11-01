@@ -163,7 +163,7 @@ export class AuthController {
       res.cookie('oauth_state', stateJwt, {
         httpOnly: true,
         secure: env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 10 * 60 * 1000, // 10 minutes
         path: '/api/auth/google',
       });
@@ -198,7 +198,7 @@ export class AuthController {
     res.clearCookie('oauth_state', {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/api/auth/google',
     });
 

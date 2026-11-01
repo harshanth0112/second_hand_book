@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getApiUrl } from '../api/client';
 import { DEPARTMENTS } from '../constants';
 import { Eye, EyeOff, BookOpen, AlertCircle } from 'lucide-react';
 
@@ -115,7 +116,7 @@ export const Register = () => {
         {/* Continue with Google button */}
         <div>
           <a
-            href="/api/auth/google"
+            href={getApiUrl('/auth/google')}
             className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-gray-300 rounded-xl shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">

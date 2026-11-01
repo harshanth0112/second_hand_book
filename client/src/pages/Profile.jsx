@@ -309,7 +309,7 @@ export const Profile = () => {
               aria-label="Change profile photo"
             >
               {avatarUploading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-white" />
+                <Loader2 className="w-5 h-5 animate-spin motion-reduce:animate-none text-white" />
               ) : (
                 <>
                   <Camera className="w-5 h-5" />
@@ -510,7 +510,7 @@ export const Profile = () => {
               >
                 {avatarUploading ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin motion-reduce:animate-none" />
                     <span>Uploading...</span>
                   </>
                 ) : (
@@ -545,7 +545,7 @@ export const Profile = () => {
               >
                 {profileSaving ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
                     Saving changes...
                   </>
                 ) : (
@@ -679,7 +679,7 @@ export const Profile = () => {
                   >
                     {passwordSaving ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
                         Updating...
                       </>
                     ) : (
@@ -723,7 +723,7 @@ export const Profile = () => {
             >
               {exporting ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin motion-reduce:animate-none" />
                   Generating Archive...
                 </>
               ) : (

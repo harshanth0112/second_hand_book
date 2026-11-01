@@ -9,7 +9,7 @@ export function Pagination({ page, totalPages, onPageChange }) {
       <button
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
-        className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent transition"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:opacity-40 disabled:hover:bg-transparent transition"
         title="Previous Page"
         aria-label="Previous Page"
       >
@@ -23,7 +23,7 @@ export function Pagination({ page, totalPages, onPageChange }) {
       <button
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
-        className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent transition"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:opacity-40 disabled:hover:bg-transparent transition"
         title="Next Page"
         aria-label="Next Page"
       >
@@ -32,4 +32,3 @@ export function Pagination({ page, totalPages, onPageChange }) {
     </div>
   );
 }
-

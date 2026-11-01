@@ -209,7 +209,7 @@ export function Admin() {
 
           {reportsLoading && (
             <div className="py-16 text-center text-gray-400 flex items-center justify-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin motion-reduce:animate-none" />
               Loading moderation reports...
             </div>
           )}
@@ -389,7 +389,7 @@ export function Admin() {
 
           {meetupLoading && (
             <div className="py-16 text-center text-gray-400 flex items-center justify-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin motion-reduce:animate-none" />
               Loading meetup points...
             </div>
           )}
@@ -517,7 +517,7 @@ export function Admin() {
                   disabled={creatingPoint || !newPoint.name.trim()}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {creatingPoint ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Point'}
+                  {creatingPoint ? <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" /> : 'Create Point'}
                 </button>
               </div>
             </form>
@@ -527,4 +527,3 @@ export function Admin() {
     </div>
   );
 }
-

@@ -96,7 +96,7 @@ export function AcceptRequestModal({ request, isOpen, onClose, onAccept, accepti
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-      <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl border border-gray-200 relative animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl border border-gray-200 relative animate-in fade-in duration-200 motion-reduce:animate-none">
         <button
           type="button"
           onClick={onClose}
@@ -121,11 +121,12 @@ export function AcceptRequestModal({ request, isOpen, onClose, onAccept, accepti
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1 flex items-center gap-1.5">
+            <label htmlFor="accept-meetup-location" className="block text-xs font-semibold text-gray-800 mb-1 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-blue-600" />
               Campus Meetup Location
             </label>
             <select
+              id="accept-meetup-location"
               value={selectedPointId}
               onChange={(e) => setSelectedPointId(e.target.value)}
               disabled={loadingPoints || points.length === 0}
@@ -146,11 +147,12 @@ export function AcceptRequestModal({ request, isOpen, onClose, onAccept, accepti
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1 flex items-center gap-1.5">
+            <label htmlFor="accept-meetup-time" className="block text-xs font-semibold text-gray-800 mb-1 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-blue-600" />
               Meetup Date & Time (Within 14 Days)
             </label>
             <input
+              id="accept-meetup-time"
               type="datetime-local"
               value={meetupTime}
               onChange={(e) => setMeetupTime(e.target.value)}

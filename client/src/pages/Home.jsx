@@ -26,12 +26,8 @@ export function Home() {
 
   const filters = {
     q: localQuery,
-    department: rawDept === 'all'
-      ? ''
-      : (rawDept || (user?.department && !searchParams.toString() ? user.department : '')),
-    semester: rawSem === 'all'
-      ? ''
-      : (rawSem || (user?.semester && !searchParams.toString() ? String(user.semester) : '')),
+    department: rawDept === 'all' ? '' : rawDept || '',
+    semester: rawSem === 'all' ? '' : rawSem || '',
     condition: searchParams.get('condition') || '',
     listingType: searchParams.get('listingType') || '',
     minPrice: searchParams.get('minPrice') || '',
@@ -49,8 +45,7 @@ export function Home() {
     const nextParams = new URLSearchParams();
     for (const [k, v] of Object.entries(updated)) {
       if (k === 'department') {
-        // If the user selected "All Departments" (empty string), explicitly save department=all
-        // so it overrides the user profile default and doesn't get re-applied.
+        // Preserve an explicit "All Departments" selection in the URL.
         if (v === '' || v === 'all') {
           nextParams.set('department', 'all');
         } else {
@@ -60,6 +55,7 @@ export function Home() {
       }
 
       if (k === 'semester') {
+        // Preserve an explicit "All Semesters" selection in the URL.
         if (v === '' || v === 'all') {
           nextParams.set('semester', 'all');
         } else {
@@ -149,7 +145,7 @@ export function Home() {
       ) : loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3 animate-pulse">
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3 animate-pulse motion-reduce:animate-none">
               <div className="aspect-[4/3] bg-gray-200 rounded-lg" />
               <div className="h-4 bg-gray-200 rounded w-3/4" />
               <div className="h-3 bg-gray-100 rounded w-1/2" />

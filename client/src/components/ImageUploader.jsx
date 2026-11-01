@@ -100,11 +100,13 @@ export function ImageUploader({
                 <button
                   type="button"
                   onClick={() => onRemoveExisting(idx)}
-                  className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition"
+                  className="absolute top-1 right-1 inline-flex h-11 w-11 items-center justify-center rounded-full text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-blue-600"
                   title="Remove photo"
-                  aria-label="Remove photo"
+                  aria-label={`Remove photo ${idx + 1}`}
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/60 transition group-hover:bg-black/80">
+                    <X className="w-3.5 h-3.5" />
+                  </span>
                 </button>
               )}
             </div>
@@ -117,8 +119,9 @@ export function ImageUploader({
             <button
               type="button"
               onClick={() => removeSelected(idx)}
-              className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 transition"
-              title="Cancel selection"
+              className="absolute top-1 right-1 inline-flex h-11 w-11 items-center justify-center bg-red-600 hover:bg-red-700 text-white rounded-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-blue-600"
+              title="Remove selected image"
+              aria-label={`Remove selected image ${idx + 1}`}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -153,4 +156,3 @@ export function ImageUploader({
     </div>
   );
 }
-

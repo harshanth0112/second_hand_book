@@ -68,7 +68,7 @@ export const NotificationBell = () => {
       <button
         type="button"
         onClick={toggleDropdown}
-        className="relative p-2 text-gray-700 hover:text-blue-600 rounded-lg hover:bg-gray-100 transition"
+        className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center text-gray-700 hover:text-blue-600 rounded-lg hover:bg-gray-100 transition xl:h-9 xl:w-9"
         title="Notifications"
         aria-label="Notifications"
         aria-expanded={open}
@@ -82,7 +82,7 @@ export const NotificationBell = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+        <div className="fixed right-4 top-16 mt-2 w-[calc(100vw-2rem)] sm:absolute sm:right-0 sm:top-auto sm:w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
             <span className="font-semibold text-gray-900 text-sm">Notifications</span>
             {notifications.some((n) => !n.read) && (
@@ -132,10 +132,14 @@ export const NotificationBell = () => {
                     )}
                     {!notif.read && (
                       <button
+                        type="button"
                         onClick={(e) => handleMarkRead(notif._id, e)}
-                        className="w-2 h-2 rounded-full bg-blue-600"
-                        title="Mark as read"
-                      />
+                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-blue-600 transition hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                        title="Mark notification as read"
+                        aria-label="Mark notification as read"
+                      >
+                        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-600" />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -157,4 +161,3 @@ export const NotificationBell = () => {
     </div>
   );
 };
-

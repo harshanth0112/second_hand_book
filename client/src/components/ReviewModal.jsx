@@ -32,7 +32,7 @@ export function ReviewModal({ isOpen, onClose, request, onReviewed }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-150 motion-reduce:animate-none">
         <button
           type="button"
           onClick={onClose}
@@ -56,25 +56,39 @@ export function ReviewModal({ isOpen, onClose, request, onReviewed }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex flex-col items-center justify-center py-2">
+          <fieldset className="flex flex-col items-center justify-center py-2" onMouseLeave={() => setHoverRating(0)}>
+            <legend className="sr-only">Rating</legend>
             <div className="flex gap-1.5">
               {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  type="button"
+                <div
                   key={star}
-                  onClick={() => setRating(star)}
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(0)}
-                  className="p-1 focus:outline-hidden transition"
+                  className="relative rounded-lg focus-within:ring-2 focus-within:ring-blue-600 focus-within:ring-offset-2"
                 >
-                  <Star
-                    className={`w-7 h-7 ${
-                      (hoverRating || rating) >= star
-                        ? 'fill-amber-400 text-amber-400'
-                        : 'text-gray-300'
-                    }`}
+                  <input
+                    id={`review-rating-${star}`}
+                    type="radio"
+                    name="review-rating"
+                    value={star}
+                    checked={rating === star}
+                    onChange={() => setRating(star)}
+                    className="peer sr-only"
+                    aria-label={`${star} ${star === 1 ? 'star' : 'stars'}`}
                   />
-                </button>
+                  <label
+                    htmlFor={`review-rating-${star}`}
+                    onMouseEnter={() => setHoverRating(star)}
+                    className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg transition motion-reduce:transition-none"
+                  >
+                    <Star
+                      aria-hidden="true"
+                      className={`w-7 h-7 ${
+                        (hoverRating || rating) >= star
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  </label>
+                </div>
               ))}
             </div>
             <span className="text-xs text-gray-500 mt-2 font-medium">
@@ -88,13 +102,14 @@ export function ReviewModal({ isOpen, onClose, request, onReviewed }) {
                 ? 'Poor'
                 : 'Terrible'}
             </span>
-          </div>
+          </fieldset>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
+            <label htmlFor="review-feedback" className="block text-xs font-semibold text-gray-700 uppercase mb-1">
               Feedback (Optional)
             </label>
             <textarea
+              id="review-feedback"
               rows={3}
               placeholder="Was the book as described? Prompt meetup?"
               value={comment}
@@ -124,4 +139,3 @@ export function ReviewModal({ isOpen, onClose, request, onReviewed }) {
     </div>
   );
 }
-

@@ -40,12 +40,14 @@ export function DeleteAccountModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in motion-reduce:animate-none">
       <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-red-100 relative">
         <button
+          type="button"
           onClick={onClose}
           disabled={loading}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+          className="absolute top-4 right-4 inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          aria-label="Close delete account dialog"
         >
           <X className="w-5 h-5" />
         </button>
@@ -76,10 +78,11 @@ export function DeleteAccountModal({ isOpen, onClose }) {
 
         <form onSubmit={handleDelete} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+            <label htmlFor="delete-account-confirmation" className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
               Type <span className="font-bold text-red-600">DELETE</span> to confirm
             </label>
             <input
+              id="delete-account-confirmation"
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
@@ -91,10 +94,11 @@ export function DeleteAccountModal({ isOpen, onClose }) {
 
           {isPasswordRequired && (
             <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+              <label htmlFor="delete-account-password" className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
                 Account Password
               </label>
               <input
+                id="delete-account-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -121,7 +125,7 @@ export function DeleteAccountModal({ isOpen, onClose }) {
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
                   Deleting...
                 </>
               ) : (
@@ -137,4 +141,3 @@ export function DeleteAccountModal({ isOpen, onClose }) {
     </div>
   );
 }
-

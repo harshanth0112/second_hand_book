@@ -60,7 +60,7 @@ export const VerifyEmail = () => {
 
         {loading && (
           <div className="space-y-4">
-            <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
+            <Loader2 className="w-12 h-12 text-blue-600 animate-spin motion-reduce:animate-none mx-auto" />
             <h1 className="text-xl font-bold text-gray-900">Verifying Email</h1>
             <p className="text-sm text-gray-600">Please wait while we verify your email address...</p>
           </div>

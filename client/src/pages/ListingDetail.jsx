@@ -212,7 +212,7 @@ export function ListingDetail() {
 
           {/* Seller Profile & Interaction Footers */}
           <div className="border-t border-gray-200 pt-6 mt-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm border border-blue-200">
                   {listing.seller?.name ? listing.seller.name.charAt(0).toUpperCase() : 'U'}
@@ -234,7 +234,7 @@ export function ListingDetail() {
                 {user && !isOwner && (
                   <button
                     onClick={() => setIsReportModalOpen(true)}
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition"
+                    className="inline-flex min-h-11 lg:min-h-0 items-center gap-1 px-3 py-2 lg:px-0 lg:py-0 text-xs text-gray-400 hover:text-red-500 transition"
                     title="Report this listing"
                   >
                     <Flag className="w-3.5 h-3.5" />
@@ -360,4 +360,3 @@ export function ListingDetail() {
     </div>
   );
 }
-

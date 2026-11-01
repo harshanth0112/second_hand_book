@@ -32,7 +32,7 @@ export function RequestModal({ listing, isOpen, onClose, onSubmit, submitting = 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-      <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl border border-gray-200 relative animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl border border-gray-200 relative animate-in fade-in duration-200 motion-reduce:animate-none">
         <button
           type="button"
           onClick={onClose}
@@ -57,10 +57,11 @@ export function RequestModal({ listing, isOpen, onClose, onSubmit, submitting = 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSwap && (
             <div>
-              <label className="block text-xs font-semibold text-gray-800 mb-1">
+              <label htmlFor="request-offered-book" className="block text-xs font-semibold text-gray-800 mb-1">
                 Your Offered Book <span className="text-red-500">*</span>
               </label>
               <input
+                id="request-offered-book"
                 type="text"
                 value={offeredBook}
                 onChange={(e) => setOfferedBook(e.target.value)}
@@ -73,10 +74,11 @@ export function RequestModal({ listing, isOpen, onClose, onSubmit, submitting = 
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1">
+            <label htmlFor="request-message" className="block text-xs font-semibold text-gray-800 mb-1">
               Note to Seller (Optional)
             </label>
             <textarea
+              id="request-message"
               rows={3}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -108,4 +110,3 @@ export function RequestModal({ listing, isOpen, onClose, onSubmit, submitting = 
     </div>
   );
 }
-

@@ -44,7 +44,7 @@ export function ReportModal({ isOpen, onClose, targetType, targetId, title }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-150 motion-reduce:animate-none">
         <button
           type="button"
           onClick={onClose}
@@ -78,10 +78,11 @@ export function ReportModal({ isOpen, onClose, targetType, targetId, title }) {
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
+              <label htmlFor="report-reason" className="block text-xs font-semibold text-gray-700 uppercase mb-1">
                 Reason
               </label>
               <select
+                id="report-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-hidden"
@@ -95,10 +96,11 @@ export function ReportModal({ isOpen, onClose, targetType, targetId, title }) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
+              <label htmlFor="report-details" className="block text-xs font-semibold text-gray-700 uppercase mb-1">
                 Additional Details (Optional)
               </label>
               <textarea
+                id="report-details"
                 rows={3}
                 placeholder="Describe what went wrong..."
                 value={details}
@@ -129,4 +131,3 @@ export function ReportModal({ isOpen, onClose, targetType, targetId, title }) {
     </div>
   );
 }
-

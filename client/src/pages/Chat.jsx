@@ -285,7 +285,8 @@ export function Chat() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => navigate('/chat')}
-                    className="md:hidden text-gray-500 hover:text-gray-800"
+                    className="md:hidden inline-flex h-11 w-11 shrink-0 items-center justify-center text-gray-500 hover:text-gray-800"
+                    aria-label="Back to conversations"
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </button>
@@ -437,12 +438,12 @@ export function Chat() {
                   onChange={handleInputChange}
                   maxLength={1000}
                   placeholder="Type a message..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs"
+                  className="min-h-11 lg:min-h-0 min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs"
                 />
                 <button
                   type="submit"
                   disabled={!inputText.trim()}
-                  className="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition disabled:opacity-50"
+                  className="inline-flex min-h-11 lg:min-h-0 shrink-0 items-center justify-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition disabled:opacity-50"
                 >
                   <Send className="w-3.5 h-3.5" />
                   Send
@@ -455,4 +456,3 @@ export function Chat() {
     </div>
   );
 }
-

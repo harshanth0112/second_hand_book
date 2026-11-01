@@ -118,12 +118,13 @@ export function Requests() {
       </div>
 
       {/* Sub-status Filter Buttons */}
-      <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 text-xs">
+      <div className="flex flex-wrap items-center gap-2 mb-6 text-xs">
         {['', 'pending', 'accepted', 'completed', 'cancelled', 'rejected'].map((s) => (
           <button
+            type="button"
             key={s}
             onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1.5 rounded-lg capitalize font-medium transition ${
+            className={`min-h-11 lg:min-h-0 px-3 py-1.5 rounded-lg capitalize font-medium transition ${
               statusFilter === s
                 ? 'bg-blue-50 text-blue-700 font-semibold'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -185,14 +186,14 @@ export function Requests() {
                   </div>
 
                   {/* Textbook info */}
-                  <div className="text-right sm:self-center">
+                  <div className="flex min-w-0 items-center justify-between gap-2 sm:self-center">
                     <Link
                       to={`/listings/${item.listing?._id}`}
-                      className="font-medium text-gray-900 hover:text-blue-600 transition text-sm line-clamp-1"
+                      className="min-w-0 flex-1 font-medium text-gray-900 hover:text-blue-600 transition text-sm line-clamp-1"
                     >
                       {item.listing?.title}
                     </Link>
-                    <span className="text-xs font-semibold text-gray-700">
+                    <span className="shrink-0 text-xs font-semibold text-gray-700">
                       {item.listing?.listingType === 'free'
                         ? 'Free'
                         : item.listing?.listingType === 'swap'

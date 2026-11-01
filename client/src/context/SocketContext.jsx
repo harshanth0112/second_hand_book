@@ -55,7 +55,7 @@ export function SocketProvider({ children }) {
 
     const s = io(socketUrl, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
     });
 
     s.on('connect', () => {

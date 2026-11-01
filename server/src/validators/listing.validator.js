@@ -54,6 +54,13 @@ const baseListingFields = {
     .max(500, 'Note cannot exceed 500 characters')
     .optional()
     .default(''),
+  coverUrl: z
+    .string()
+    .trim()
+    .url('Cover URL must be a valid URL')
+    .or(z.literal(''))
+    .optional()
+    .default(''),
 };
 
 const sellListingSchema = z

@@ -3,6 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getMyListings, deleteListing, relistListing } from '../api/listings';
 import { Plus, Edit2, Trash2, RefreshCw, Eye, BookOpen, AlertCircle } from 'lucide-react';
 
+const getImageUrl = (image) => (
+  typeof image === 'object' && image !== null ? image.url : image
+) || '';
+
 export function MyListings() {
   const navigate = useNavigate();
   const [listings, setListings] = useState([]);
@@ -140,8 +144,8 @@ export function MyListings() {
             <div key={item._id} className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition">
               <div className="flex items-start gap-4">
                 <div className="w-16 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center">
-                  {item.images && item.images.length > 0 ? (
-                    <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
+                  {getImageUrl(item.images?.[0]) ? (
+                    <img src={getImageUrl(item.images?.[0])} alt={item.title} className="w-full h-full object-cover" />
                   ) : (
                     <BookOpen className="w-6 h-6 text-gray-400" />
                   )}
@@ -218,4 +222,3 @@ export function MyListings() {
     </div>
   );
 }
-

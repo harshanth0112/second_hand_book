@@ -8,7 +8,8 @@
     "client"
   ],
   "scripts": {
-    "dev:server": "npm --prefix server run dev",
+    "dev": "npm run dev:server",
+    "dev:server": "npm --prefix server run dev:standalone",
     "dev:client": "npm --prefix client run dev",
     "test:server": "npm --prefix server test",
     "test:client": "npm --prefix client test",

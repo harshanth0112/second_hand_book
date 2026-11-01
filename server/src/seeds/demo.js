@@ -8,10 +8,28 @@ import { Message } from '../models/Message.js';
 import { Review } from '../models/Review.js';
 import { env } from '../config/env.js';
 
-export async function seedDemoData() {
-  if (env.NODE_ENV === 'production') {
+export function assertDemoSeedAllowed(targetEnv = env.NODE_ENV, uri = env.MONGODB_URI) {
+  if (targetEnv === 'production') {
     throw new Error('Cannot run demo seed in production mode');
   }
+
+  if (uri) {
+    const isLocalhost = uri.includes('localhost') || uri.includes('127.0.0.1');
+    const isMemoryServer = uri.includes('memory') || uri.startsWith('mongodb-memory-server');
+    const isRemoteAtlas = uri.includes('mongodb+srv://') || uri.includes('.mongodb.net');
+
+    if (isRemoteAtlas || (!isLocalhost && !isMemoryServer)) {
+      throw new Error(
+        `[DemoSeed Safety Guard] Refusing to seed demo data. ` +
+        `Target database appears to be a remote/Atlas cluster: "${uri}". ` +
+        `Demo seeding is destructive and only permitted on local or in-memory MongoDB instances.`
+      );
+    }
+  }
+}
+
+export async function seedDemoData() {
+  assertDemoSeedAllowed();
 
   console.log('[DemoSeed] Clearing existing demo data...');
   await Promise.all([
@@ -137,6 +155,8 @@ export async function seedDemoData() {
     seller: alice._id,
     expiresAt: futureExpiry,
     status: 'available',
+    coverUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80'],
   });
 
   const l2 = await Listing.create({
@@ -153,6 +173,8 @@ export async function seedDemoData() {
     seller: bob._id,
     expiresAt: futureExpiry,
     status: 'available',
+    coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&auto=format&fit=crop&q=80'],
   });
 
   const l3 = await Listing.create({
@@ -169,6 +191,8 @@ export async function seedDemoData() {
     seller: charlie._id,
     expiresAt: futureExpiry,
     status: 'available',
+    coverUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&auto=format&fit=crop&q=80'],
   });
 
   const l4 = await Listing.create({
@@ -185,6 +209,8 @@ export async function seedDemoData() {
     seller: alice._id,
     expiresAt: futureExpiry,
     status: 'available',
+    coverUrl: 'https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=600&auto=format&fit=crop&q=80'],
   });
 
   const l5 = await Listing.create({
@@ -201,6 +227,8 @@ export async function seedDemoData() {
     seller: bob._id,
     expiresAt: futureExpiry,
     status: 'available',
+    coverUrl: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=600&auto=format&fit=crop&q=80'],
   });
 
   const l6 = await Listing.create({
@@ -217,6 +245,8 @@ export async function seedDemoData() {
     seller: charlie._id,
     expiresAt: futureExpiry,
     status: 'available',
+    coverUrl: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=600&auto=format&fit=crop&q=80'],
   });
 
   const l7 = await Listing.create({
@@ -235,6 +265,8 @@ export async function seedDemoData() {
     status: 'sold',
     buyer: bob._id,
     soldAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    coverUrl: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1509228468518-180dd4864904?w=600&auto=format&fit=crop&q=80'],
   });
 
   // 3 free giveaway listings
@@ -252,6 +284,8 @@ export async function seedDemoData() {
     seller: diana._id,
     expiresAt: futureExpiry,
     status: 'available',
+    coverUrl: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&auto=format&fit=crop&q=80'],
   });
 
   const l9 = await Listing.create({
@@ -268,6 +302,8 @@ export async function seedDemoData() {
     seller: charlie._id,
     expiresAt: futureExpiry,
     status: 'available',
+    coverUrl: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=600&auto=format&fit=crop&q=80'],
   });
 
   const l10 = await Listing.create({
@@ -284,6 +320,8 @@ export async function seedDemoData() {
     seller: bob._id,
     expiresAt: futureExpiry,
     status: 'available',
+    coverUrl: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=600&auto=format&fit=crop&q=80'],
   });
 
   // 2 swap listings
@@ -302,6 +340,8 @@ export async function seedDemoData() {
     seller: alice._id,
     expiresAt: futureExpiry,
     status: 'available',
+    coverUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=600&auto=format&fit=crop&q=80'],
   });
 
   const l12 = await Listing.create({
@@ -320,9 +360,11 @@ export async function seedDemoData() {
     expiresAt: futureExpiry,
     status: 'reserved',
     reservedFor: diana._id,
+    coverUrl: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=600&auto=format&fit=crop&q=80',
+    images: ['https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=600&auto=format&fit=crop&q=80'],
   });
 
-  console.log('[DemoSeed] Creating 3 requests in different states...');
+  console.log('[DemoSeed] Creating 4 requests in different states...');
   // Request 1: Completed
   const req1 = await Request.create({
     listing: l7._id,
@@ -335,7 +377,19 @@ export async function seedDemoData() {
     completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
   });
 
-  // Request 2: Accepted / Reserved
+  // Request 2: Completed (for Alice's sold listing l4)
+  const req4 = await Request.create({
+    listing: l4._id,
+    seller: alice._id,
+    buyer: diana._id,
+    status: 'completed',
+    agreedPrice: 500,
+    meetupPoint: meetupPoints[0]._id,
+    dualConfirmedBy: [alice._id, diana._id],
+    completedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+  });
+
+  // Request 3: Accepted / Reserved
   const req2 = await Request.create({
     listing: l12._id,
     seller: charlie._id,
@@ -345,7 +399,7 @@ export async function seedDemoData() {
     meetupPoint: meetupPoints[1]._id,
   });
 
-  // Request 3: Pending
+  // Request 4: Pending
   const req3 = await Request.create({
     listing: l1._id,
     seller: alice._id,
@@ -399,8 +453,8 @@ export async function seedDemoData() {
       comment: 'Excellent condition book, punctual handover at the Central Library!',
     },
     {
-      request: new mongoose.Types.ObjectId(),
-      listing: new mongoose.Types.ObjectId(),
+      request: req4._id,
+      listing: l4._id,
       seller: alice._id,
       reviewer: diana._id,
       rating: 5,
@@ -425,3 +479,4 @@ if (process.argv[1]?.endsWith('demo.js')) {
       process.exit(1);
     });
 }
+

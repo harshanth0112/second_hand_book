@@ -27,10 +27,24 @@ const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().optional().default(''),
   // Admin seed
   ADMIN_EMAIL: z.string().optional().default('admin@college.edu'),
-  ADMIN_PASSWORD: z.string().optional().default('Admin1234!'),
+  ADMIN_PASSWORD: z.string().optional(),
   // Background jobs
   JOBS_ENABLED: z.string().optional().default('false').transform((val) => val === 'true'),
-});
+}).refine(
+  (data) => {
+    if (data.NODE_ENV === 'production' && !data.ADMIN_PASSWORD) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'ADMIN_PASSWORD must be explicitly provided in production (cannot use fallback default password)',
+    path: ['ADMIN_PASSWORD'],
+  }
+).transform((data) => ({
+  ...data,
+  ADMIN_PASSWORD: data.ADMIN_PASSWORD || 'Admin1234!',
+}));
 
 const parsedEnv = envSchema.safeParse(process.env);
 

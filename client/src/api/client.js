@@ -1,4 +1,11 @@
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
+if (!API_BASE && import.meta.env.PROD) {
+  console.warn(
+    '[api/client] VITE_API_URL is not set in production. ' +
+    'API calls will fall back to relative paths, which will fail if frontend and backend are hosted on different domains.'
+  );
+}
 
 export async function apiClient(endpoint, options = {}) {
   const { body, headers = {}, ...customConfig } = options;

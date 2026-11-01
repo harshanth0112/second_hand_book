@@ -33,17 +33,27 @@ export function SocketProvider({ children }) {
 
   useEffect(() => {
     if (!user) {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-      }
+      setSocket((prev) => {
+        if (prev) {
+          prev.disconnect();
+        }
+        return null;
+      });
       setUnreadTotal(0);
       setUnreadNotifications(0);
       return;
     }
 
     // Connect socket using credentials/cookie
-    const s = io({
+    const socketUrl = import.meta.env.VITE_API_URL || undefined;
+    if (!socketUrl && import.meta.env.PROD) {
+      console.warn(
+        '[SocketContext] VITE_API_URL is not set in production. ' +
+        'Socket.IO will default to current window origin, which may fail if frontend and backend are hosted separately.'
+      );
+    }
+
+    const s = io(socketUrl, {
       withCredentials: true,
       transports: ['websocket', 'polling'],
     });
@@ -69,6 +79,7 @@ export function SocketProvider({ children }) {
 
     return () => {
       s.disconnect();
+      setSocket((prev) => (prev === s ? null : prev));
     };
   }, [user]);
 
